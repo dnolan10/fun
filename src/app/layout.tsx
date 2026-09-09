@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "The Pool House",
+  title: "The Sic 'Em Sheet",
   description: "Weekly college football pick 'em, against the spread.",
 };
 

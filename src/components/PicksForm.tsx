@@ -114,6 +114,8 @@ export default function PicksForm({
     });
   }
 
+  const pickedCount = games.filter((g) => picks[g.id]).length;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 rounded border border-line bg-surface p-3">
@@ -162,6 +164,11 @@ export default function PicksForm({
         </button>
       </div>
 
+      <p className="text-sm text-mute">
+        You&apos;ve picked <span className="text-orange">{pickedCount}</span> of {games.length}{" "}
+        games. Tap any game below to change your pick until it locks at kickoff.
+      </p>
+
       {games.map((g) => {
         const locked = isLocked(g.kickoff_time);
         const pick = picks[g.id];
@@ -188,6 +195,7 @@ export default function PicksForm({
                 </span>
               )}
               {locked && <span className="font-medium text-loss">Locked</span>}
+              {pick && !locked && <span className="font-medium text-orange">Your pick: {pick === "home" ? g.home_team : g.away_team}</span>}
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-3">

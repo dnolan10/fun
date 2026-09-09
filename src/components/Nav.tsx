@@ -23,7 +23,7 @@ export default async function Nav() {
     <header className="yard-lines border-b border-line">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
         <Link href="/" className="font-display text-xl font-semibold tracking-tight text-ink">
-          The Pool House
+          The Sic 'Em Sheet
         </Link>
         <nav className="flex items-center gap-5 text-sm text-mute">
           {user ? (

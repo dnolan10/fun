@@ -1,11 +1,11 @@
-# The Pool House — College Football Pick 'Em
+# The Sic 'Em Sheet — College Football Pick 'Em
 
 A weekly pick 'em site: you (the admin) choose the games and set the spread each week,
 your friends sign in with just their email and pick winners against the spread, guess
 the total score on a tiebreaker game, and standings update automatically — weekly and
 season-long.
 
-Rename it anything you want — search for "The Pool House" in `src/app/layout.tsx` and
+Rename it anything you want — search for "The Sic 'Em Sheet" in `src/app/layout.tsx` and
 `src/components/Nav.tsx`.
 
 Everything below is free at the scale of a friend group.

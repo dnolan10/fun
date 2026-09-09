@@ -45,12 +45,7 @@ async function fetchApRankings(): Promise<Map<string, number>> {
 }
 
 function lookupRank(teamName: string, rankMap: Map<string, number>): number | null {
-  const norm = normalizeTeamName(teamName);
-  if (rankMap.has(norm)) return rankMap.get(norm)!;
-  for (const [key, rank] of rankMap.entries()) {
-    if (norm.includes(key) || key.includes(norm)) return rank;
-  }
-  return null;
+  return rankMap.get(normalizeTeamName(teamName)) ?? null;
 }
 
 function findEntriesRecursive(node: any, out: any[]) {
@@ -117,12 +112,7 @@ async function fetchTeamStats(): Promise<Map<string, TeamStat>> {
 }
 
 function lookupTeamStat(teamName: string, statsMap: Map<string, TeamStat>): TeamStat {
-  const norm = normalizeTeamName(teamName);
-  if (statsMap.has(norm)) return statsMap.get(norm)!;
-  for (const [key, stat] of statsMap.entries()) {
-    if (norm.includes(key) || key.includes(norm)) return stat;
-  }
-  return { record: null, ppg: null };
+  return statsMap.get(normalizeTeamName(teamName)) ?? { record: null, ppg: null };
 }
 
 export async function GET() {
