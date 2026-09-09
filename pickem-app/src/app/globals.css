@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #241611;
+  background-image:
+    linear-gradient(180deg, rgba(242, 105, 28, 0.06) 0%, rgba(36, 22, 17, 0) 220px);
+  color: #f5ede4;
+}
+
+::selection {
+  background: #f2691c;
+  color: #241611;
+}
+
+.yard-lines {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 78px,
+    rgba(242, 240, 234, 0.04) 78px,
+    rgba(242, 240, 234, 0.04) 80px
+  );
+}
