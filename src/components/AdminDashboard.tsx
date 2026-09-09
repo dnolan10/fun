@@ -42,11 +42,11 @@ type OddsGame = {
 };
 
 type OddsDebug = {
-  espnTeamsFetched: number;
+  sportradarTeamsFetched: number;
   teamKeysBuilt: number;
   teamsRanked: number;
   teamsWithStats: number;
-  oddsGamesMatchedToEspn: number;
+  oddsGamesMatchedToSportradar: number;
   oddsGamesTotal: number;
   warnings: string[];
 };
@@ -488,8 +488,8 @@ export default function AdminDashboard({
 
               {oddsDebug && (
                 <div className="mt-3 rounded border border-line bg-surface2 p-3 text-xs text-mute">
-                  Matched {oddsDebug.oddsGamesMatchedToEspn}/{oddsDebug.oddsGamesTotal * 2} team
-                  names to ESPN · {oddsDebug.teamsRanked} teams currently ranked ·{" "}
+                  Matched {oddsDebug.oddsGamesMatchedToSportradar}/{oddsDebug.oddsGamesTotal * 2}{" "}
+                  team names to SportRadar · {oddsDebug.teamsRanked} teams currently ranked ·{" "}
                   {oddsDebug.teamsWithStats} teams with stats on file.
                   {oddsDebug.warnings.length > 0 && (
                     <div className="mt-1 text-loss">

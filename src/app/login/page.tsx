@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+// Prevents this page from ever being served stale from a cache (mobile
+// browsers and CDNs can otherwise hang onto an old build of this route).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -44,7 +49,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-sm">
+    <div className="mx-auto mt-16 max-w-sm px-1">
       <h1 className="font-display text-3xl font-semibold text-ink">
         {mode === "signin" ? "Sign in" : "Create your account"}
       </h1>
@@ -60,28 +65,50 @@ export default function LoginPage() {
           time, then come back and sign in with your password.
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded border border-line bg-surface px-3 py-2 text-ink placeholder:text-mute focus:border-orange focus:outline-none"
-          />
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full rounded border border-line bg-surface px-3 py-2 text-ink placeholder:text-mute focus:border-orange focus:outline-none"
-          />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-3" noValidate={false}>
+          <div>
+            <label htmlFor="login-email" className="sr-only">
+              Email address
+            </label>
+            <input
+              id="login-email"
+              name="userEmail"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              inputMode="email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore
+              className="w-full rounded border border-line bg-surface px-3 py-3 text-base text-ink placeholder:text-mute focus:border-orange focus:outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="login-password" className="sr-only">
+              Password
+            </label>
+            <input
+              id="login-password"
+              name="userPassword"
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              className="w-full rounded border border-line bg-surface px-3 py-3 text-base text-ink placeholder:text-mute focus:border-orange focus:outline-none"
+            />
+          </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-orange px-3 py-2 font-medium text-field hover:bg-orange/90 disabled:opacity-60"
+            className="w-full rounded bg-orange px-3 py-3 text-base font-medium text-field hover:bg-orange/90 disabled:opacity-60"
           >
             {loading ? "Working..." : mode === "signin" ? "Sign in" : "Create account"}
           </button>
