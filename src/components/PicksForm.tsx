@@ -91,6 +91,21 @@ export default function PicksForm({
 
   function handleSubmit() {
     setError("");
+
+    const unlockedGames = games.filter((g) => !isLocked(g.kickoff_time));
+    const missingPick = unlockedGames.find((g) => !picks[g.id]);
+    if (missingPick) {
+      setError(
+        `Pick every game before saving — you still need a pick for ${missingPick.away_team} @ ${missingPick.home_team}.`
+      );
+      return;
+    }
+    const tiebreakerGame = unlockedGames.find((g) => g.is_tiebreaker);
+    if (tiebreakerGame && !tiebreakers[tiebreakerGame.id]) {
+      setError("Enter your tiebreaker score guess before saving.");
+      return;
+    }
+
     startTransition(async () => {
       const supabase = createClient();
       const rows = games
@@ -182,7 +197,7 @@ export default function PicksForm({
         You&apos;ve picked <span className="text-orange">{pickedCount}</span> of {games.length}{" "}
         games.
         {anyUnlocked
-          ? " Tap any game below to change your pick until it locks at kickoff."
+          ? " You must pick every game (and the tiebreaker score) before you can save."
           : " This week is complete — all games have kicked off."}
       </p>
 

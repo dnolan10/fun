@@ -34,9 +34,17 @@ export default async function Nav() {
               <Link href="/leaderboard" className="hover:text-ink">
                 Standings
               </Link>
+              <Link href="/feedback" className="hover:text-orange" title="Flag on the Play">
+                🚩
+              </Link>
               {isAdmin && (
                 <Link href="/admin" className="hover:text-orange">
                   Admin
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href="/admin/feedback" className="hover:text-orange">
+                  Flags
                 </Link>
               )}
               <span className="hidden text-mute sm:inline">{displayName}</span>

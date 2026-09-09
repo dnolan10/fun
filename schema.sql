@@ -67,6 +67,14 @@ create table if not exists games (
   away_score int,
   is_final boolean not null default false,
   external_id text,
+  -- AP Top 25 rank at the time the game was added, null if unranked
+  home_rank int,
+  away_rank int,
+  -- Team record and season scoring average at the time the game was added
+  home_record text,
+  away_record text,
+  home_ppg numeric,
+  away_ppg numeric,
   created_at timestamptz not null default now()
 );
 
@@ -191,3 +199,30 @@ create policy "picks update own before lock" on picks for update using (
 -- Admins can do anything to picks too (e.g. cleanup)
 drop policy if exists "picks admin all" on picks;
 create policy "picks admin all" on picks for all using (is_admin()) with check (is_admin());
+
+-- ---------- EXPLICIT GRANTS ----------
+-- RLS policies above only narrow down which ROWS a role can see/touch; the
+-- role still needs the base table privilege. Grant those explicitly so this
+-- works even in Postgres setups that don't inherit default privileges.
+grant usage on schema public to authenticated, anon;
+grant select, insert, update, delete on profiles, weeks, games, picks to authenticated;
+grant select on profiles, weeks, games, picks to anon;
+grant select on game_ats_winner, pick_results, weekly_scores, cumulative_scores to authenticated, anon;
+
+-- Pool-sourced scoring history (100% reliable -- built entirely from games
+-- this pool has already scored, no external data involved)
+create or replace view team_game_scores as
+select home_team as team, home_score as points
+from games
+where is_final
+union all
+select away_team as team, away_score as points
+from games
+where is_final;
+
+create or replace view team_scoring_history as
+select team, round(avg(points)::numeric, 1) as avg_points, count(*) as games_played
+from team_game_scores
+group by team;
+
+grant select on team_game_scores, team_scoring_history to authenticated, anon;
