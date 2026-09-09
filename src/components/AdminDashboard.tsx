@@ -276,6 +276,28 @@ export default function AdminDashboard({
   }
 
   const [togglingPublish, setTogglingPublish] = useState(false);
+  const [refreshingStats, setRefreshingStats] = useState(false);
+
+  async function refreshStats() {
+    if (!selectedWeekId) return;
+    setRefreshingStats(true);
+    const res = await fetch("/api/admin/refresh-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week_id: selectedWeekId }),
+    });
+    setRefreshingStats(false);
+    if (res.ok) {
+      const { gamesUpdated, gamesTotal, teamNamesMatched, warnings } = await res.json();
+      let msg = `Updated ${gamesUpdated}/${gamesTotal} games (matched ${teamNamesMatched}/${gamesTotal * 2} team names).`;
+      if (warnings?.length) msg += `\n\n${warnings.join("\n")}`;
+      alert(msg);
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
 
   async function togglePublish(week: Week) {
     setTogglingPublish(true);
@@ -377,6 +399,15 @@ export default function AdminDashboard({
                 : selectedWeek.is_published
                 ? "Unpublish this week"
                 : "Publish this week"}
+            </button>
+          )}
+          {selectedWeek && (
+            <button
+              onClick={refreshStats}
+              disabled={refreshingStats}
+              className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+            >
+              {refreshingStats ? "Refreshing..." : "Refresh rankings & stats"}
             </button>
           )}
         </div>
