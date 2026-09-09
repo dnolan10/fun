@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 body {
-  background-color: #0f1419;
+  background-color: #241611;
   background-image:
-    linear-gradient(180deg, rgba(232, 180, 74, 0.05) 0%, rgba(15, 20, 25, 0) 220px);
-  color: #f2f0ea;
+    linear-gradient(180deg, rgba(242, 105, 28, 0.06) 0%, rgba(36, 22, 17, 0) 220px);
+  color: #f5ede4;
 }
 
 ::selection {
-  background: #e8b44a;
-  color: #0f1419;
+  background: #f2691c;
+  color: #241611;
 }
 
 .yard-lines {

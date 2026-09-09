@@ -35,13 +35,13 @@ export default async function Nav() {
                 Standings
               </Link>
               {isAdmin && (
-                <Link href="/admin" className="hover:text-gold">
+                <Link href="/admin" className="hover:text-orange">
                   Admin
                 </Link>
               )}
               <span className="hidden text-mute sm:inline">{displayName}</span>
               <form action="/auth/signout" method="post">
-                <button className="rounded border border-line px-3 py-1.5 text-ink hover:border-gold hover:text-gold">
+                <button className="rounded border border-line px-3 py-1.5 text-ink hover:border-orange hover:text-orange">
                   Sign out
                 </button>
               </form>
@@ -49,7 +49,7 @@ export default async function Nav() {
           ) : (
             <Link
               href="/login"
-              className="rounded bg-gold px-3 py-1.5 font-medium text-field hover:bg-gold/90"
+              className="rounded bg-orange px-3 py-1.5 font-medium text-field hover:bg-orange/90"
             >
               Sign in
             </Link>

@@ -5,15 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        field: "#0F1419",
-        surface: "#171F27",
-        surface2: "#1E2833",
-        line: "#2B3641",
-        gold: "#E8B44A",
-        turf: "#4A7C6F",
-        ink: "#F2F0EA",
-        mute: "#8B94A0",
-        loss: "#B4543A",
+        field: "#241611",
+        surface: "#31221A",
+        surface2: "#3D2A20",
+        line: "#5A4231",
+        orange: "#F2691C",
+        tan: "#D9A05B",
+        ink: "#F5EDE4",
+        mute: "#B49A85",
+        loss: "#C1462E",
       },
       fontFamily: {
         display: ["var(--font-oswald)", "sans-serif"],

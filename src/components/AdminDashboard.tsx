@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { isLocked } from "@/lib/scoring";
+import { isLocked, rankLabel, sortByRankThenSpread, statLine } from "@/lib/scoring";
 
 type Week = {
   id: number;
@@ -31,6 +31,12 @@ type OddsGame = {
   away_team: string;
   spread: number;
   kickoff_time: string;
+  home_rank: number | null;
+  away_rank: number | null;
+  home_record: string | null;
+  away_record: string | null;
+  home_ppg: number | null;
+  away_ppg: number | null;
 };
 
 export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games: Game[] }) {
@@ -158,7 +164,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
 
       {/* Create week */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-gold">1. Create a week</h2>
+        <h2 className="font-display text-lg text-orange">1. Create a week</h2>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-mute">Season</label>
@@ -191,7 +197,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
           <button
             onClick={createWeek}
             disabled={creatingWeek}
-            className="rounded bg-gold px-4 py-2 text-sm font-medium text-field hover:bg-gold/90 disabled:opacity-60"
+            className="rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90 disabled:opacity-60"
           >
             {creatingWeek ? "Creating..." : "Create week"}
           </button>
@@ -200,7 +206,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
 
       {/* Pull odds & build slate */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-gold">2. Build the slate</h2>
+        <h2 className="font-display text-lg text-orange">2. Build the slate</h2>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <select
             value={targetWeekId}
@@ -217,7 +223,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
           <button
             onClick={pullOdds}
             disabled={loadingOdds}
-            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-gold hover:text-gold disabled:opacity-60"
+            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
           >
             {loadingOdds ? "Pulling..." : "Pull current NCAAF odds"}
           </button>
@@ -225,11 +231,18 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
 
         {oddsGames.length > 0 && (
           <div className="mt-4 space-y-2">
-            <p className="text-xs text-mute">
-              Check the games you want in this week&apos;s pool, adjust spreads if needed, and
-              mark one as the tiebreaker.
-            </p>
-            {oddsGames.map((g) => (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-mute">
+                Check the games you want in this week&apos;s pool, adjust spreads if needed, and
+                mark one as the tiebreaker. Ranked-team games are listed first, then the most
+                lopsided unranked games.
+              </p>
+              <span className="whitespace-nowrap rounded border border-orange/40 bg-orange/10 px-3 py-1 text-sm font-medium text-orange">
+                {Object.values(selected).filter(Boolean).length} selected
+                <span className="text-mute"> (aim for 20-25)</span>
+              </span>
+            </div>
+            {sortByRankThenSpread(oddsGames).map((g) => (
               <div
                 key={g.external_id}
                 className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface2 p-3"
@@ -242,9 +255,16 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
                   }
                 />
                 <div className="flex-1 text-sm text-ink">
-                  {g.away_team} @ {g.home_team}
+                  {rankLabel(g.away_rank)}
+                  {g.away_team} @ {rankLabel(g.home_rank)}
+                  {g.home_team}
                   <div className="text-xs text-mute">
                     {new Date(g.kickoff_time).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-mute">
+                    {statLine(g.away_record, g.away_ppg)}
+                    {g.away_record || g.away_ppg != null ? "  vs  " : ""}
+                    {statLine(g.home_record, g.home_ppg)}
                   </div>
                 </div>
                 <label className="text-xs text-mute">
@@ -274,14 +294,14 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
               <button
                 onClick={() => saveSlate(true)}
                 disabled={savingSlate}
-                className="rounded bg-gold px-4 py-2 text-sm font-medium text-field hover:bg-gold/90 disabled:opacity-60"
+                className="rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90 disabled:opacity-60"
               >
                 {savingSlate ? "Saving..." : "Save & publish week"}
               </button>
               <button
                 onClick={() => saveSlate(false)}
                 disabled={savingSlate}
-                className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-gold hover:text-gold disabled:opacity-60"
+                className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
               >
                 Save as draft
               </button>
@@ -292,7 +312,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
 
       {/* Enter results */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-gold">3. Enter final scores</h2>
+        <h2 className="font-display text-lg text-orange">3. Enter final scores</h2>
         <p className="mt-1 text-xs text-mute">
           Scoring, weekly winners, and the cumulative leaderboard update automatically once you
           save a final score.
@@ -336,7 +356,7 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
               <button
                 onClick={() => saveResult(g.id)}
                 disabled={savingResult === g.id}
-                className="rounded bg-turf px-3 py-1.5 text-sm text-ink hover:bg-turf/90 disabled:opacity-60"
+                className="rounded bg-tan px-3 py-1.5 text-sm text-ink hover:bg-tan/90 disabled:opacity-60"
               >
                 {savingResult === g.id ? "Saving..." : "Save result"}
               </button>

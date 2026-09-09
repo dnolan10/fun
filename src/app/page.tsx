@@ -15,7 +15,7 @@ export default async function HomePage() {
           <br />
           Beat the spread.
           <br />
-          <span className="text-gold">Take the pot.</span>
+          <span className="text-orange">Take the pot.</span>
         </h1>
         <p className="mt-4 max-w-md text-mute">
           A weekly college football pick &apos;em with your friends, run against the point
@@ -23,7 +23,7 @@ export default async function HomePage() {
         </p>
         <Link
           href="/login"
-          className="mt-8 inline-block rounded bg-gold px-5 py-2.5 font-medium text-field hover:bg-gold/90"
+          className="mt-8 inline-block rounded bg-orange px-5 py-2.5 font-medium text-field hover:bg-orange/90"
         >
           Sign in to play
         </Link>
@@ -41,7 +41,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold text-ink">Welcome back</h1>
+      <h1 className="font-display text-3xl font-semibold text-ink">Welcome back, fellow degenerate</h1>
       {week ? (
         <div className="mt-6 rounded border border-line bg-surface p-5">
           <p className="text-sm uppercase tracking-wide text-mute">Current week</p>
@@ -49,13 +49,13 @@ export default async function HomePage() {
           <div className="mt-4 flex gap-3">
             <Link
               href="/picks"
-              className="rounded bg-gold px-4 py-2 text-sm font-medium text-field hover:bg-gold/90"
+              className="rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90"
             >
               Make your picks
             </Link>
             <Link
               href="/leaderboard"
-              className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-gold hover:text-gold"
+              className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange"
             >
               View standings
             </Link>

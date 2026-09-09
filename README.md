@@ -29,6 +29,9 @@ Everything below is free at the scale of a friend group.
    of [`supabase/schema.sql`](./supabase/schema.sql) from this project, and click **Run**.
    This creates all the tables, security rules, and the views that do the scoring math
    automatically.
+   - **Already ran schema.sql before and just pulled a newer version of this project?**
+     Don't re-run the whole file — instead run the new files in `supabase/migrations/` in
+     order (002, 003, ...). Each one only adds what's new.
 4. Go to **Project Settings → API**. You'll need three values in a minute:
    - `Project URL`
    - `anon public` key

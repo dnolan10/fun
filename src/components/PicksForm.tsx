@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatSpread, isLocked } from "@/lib/scoring";
+import { formatSpread, isLocked, rankLabel, statLine } from "@/lib/scoring";
 
 type Game = {
   id: number;
@@ -11,6 +11,12 @@ type Game = {
   spread: number;
   kickoff_time: string;
   is_tiebreaker: boolean;
+  home_rank: number | null;
+  away_rank: number | null;
+  home_record: string | null;
+  away_record: string | null;
+  home_ppg: number | null;
+  away_ppg: number | null;
 };
 
 type ExistingPick = {
@@ -46,6 +52,32 @@ export default function PicksForm({
     setPicks((prev) => ({ ...prev, [gameId]: side }));
   }
 
+  function applyQuickPick(rule: "home" | "away" | "favorites" | "underdogs" | "random") {
+    setPicks((prev) => {
+      const next = { ...prev };
+      for (const g of games) {
+        if (isLocked(g.kickoff_time)) continue; // never touch locked games
+        if (rule === "home") next[g.id] = "home";
+        else if (rule === "away") next[g.id] = "away";
+        else if (rule === "favorites") next[g.id] = g.spread <= 0 ? "home" : "away";
+        else if (rule === "underdogs") next[g.id] = g.spread <= 0 ? "away" : "home";
+        else if (rule === "random") next[g.id] = Math.random() < 0.5 ? "home" : "away";
+      }
+      return next;
+    });
+  }
+
+  function clearPicks() {
+    setPicks((prev) => {
+      const next = { ...prev };
+      for (const g of games) {
+        if (isLocked(g.kickoff_time)) continue;
+        delete next[g.id];
+      }
+      return next;
+    });
+  }
+
   function handleSubmit() {
     setError("");
     startTransition(async () => {
@@ -69,7 +101,13 @@ export default function PicksForm({
         .upsert(rows, { onConflict: "user_id,game_id" });
 
       if (upsertError) {
-        setError(upsertError.message);
+        console.error("Pick save failed:", upsertError);
+        setError(
+          `Save failed: ${upsertError.message}${
+            upsertError.code ? ` (code ${upsertError.code})` : ""
+          }`
+        );
+        setSavedAt(null);
       } else {
         setSavedAt(Date.now());
       }
@@ -78,6 +116,52 @@ export default function PicksForm({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 rounded border border-line bg-surface p-3">
+        <span className="w-full text-xs text-mute sm:w-auto sm:self-center">Quick pick:</span>
+        <button
+          type="button"
+          onClick={() => applyQuickPick("home")}
+          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+        >
+          All home teams
+        </button>
+        <button
+          type="button"
+          onClick={() => applyQuickPick("away")}
+          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+        >
+          All away teams
+        </button>
+        <button
+          type="button"
+          onClick={() => applyQuickPick("favorites")}
+          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+        >
+          All favorites
+        </button>
+        <button
+          type="button"
+          onClick={() => applyQuickPick("underdogs")}
+          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+        >
+          All underdogs
+        </button>
+        <button
+          type="button"
+          onClick={() => applyQuickPick("random")}
+          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+        >
+          Random
+        </button>
+        <button
+          type="button"
+          onClick={clearPicks}
+          className="rounded border border-line px-3 py-1.5 text-xs text-loss hover:border-loss"
+        >
+          Clear
+        </button>
+      </div>
+
       {games.map((g) => {
         const locked = isLocked(g.kickoff_time);
         const pick = picks[g.id];
@@ -85,7 +169,7 @@ export default function PicksForm({
           <div
             key={g.id}
             className={`rounded border p-4 ${
-              g.is_tiebreaker ? "border-gold/50 bg-gold/5" : "border-line bg-surface"
+              g.is_tiebreaker ? "border-orange/50 bg-orange/5" : "border-line bg-surface"
             }`}
           >
             <div className="flex items-center justify-between text-xs text-mute">
@@ -99,7 +183,7 @@ export default function PicksForm({
                 })}
               </span>
               {g.is_tiebreaker && (
-                <span className="font-medium uppercase tracking-wide text-gold">
+                <span className="font-medium uppercase tracking-wide text-orange">
                   Tiebreaker game
                 </span>
               )}
@@ -113,12 +197,16 @@ export default function PicksForm({
                 onClick={() => selectTeam(g.id, "away")}
                 className={`rounded border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   pick === "away"
-                    ? "border-gold bg-gold/10 text-ink"
-                    : "border-line text-ink hover:border-gold/60"
+                    ? "border-orange bg-orange/10 text-ink"
+                    : "border-line text-ink hover:border-orange/60"
                 }`}
               >
-                <div className="font-display text-lg">{g.away_team}</div>
+                <div className="font-display text-lg">
+                  {rankLabel(g.away_rank)}
+                  {g.away_team}
+                </div>
                 <div className="text-sm text-mute">{formatSpread(g.spread, "away")}</div>
+                <div className="text-xs text-mute">{statLine(g.away_record, g.away_ppg)}</div>
               </button>
               <button
                 type="button"
@@ -126,12 +214,16 @@ export default function PicksForm({
                 onClick={() => selectTeam(g.id, "home")}
                 className={`rounded border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   pick === "home"
-                    ? "border-gold bg-gold/10 text-ink"
-                    : "border-line text-ink hover:border-gold/60"
+                    ? "border-orange bg-orange/10 text-ink"
+                    : "border-line text-ink hover:border-orange/60"
                 }`}
               >
-                <div className="font-display text-lg">{g.home_team}</div>
+                <div className="font-display text-lg">
+                  {rankLabel(g.home_rank)}
+                  {g.home_team}
+                </div>
                 <div className="text-sm text-mute">{formatSpread(g.spread, "home")}</div>
+                <div className="text-xs text-mute">{statLine(g.home_record, g.home_ppg)}</div>
               </button>
             </div>
 
@@ -148,7 +240,7 @@ export default function PicksForm({
                     setTiebreakers((prev) => ({ ...prev, [g.id]: e.target.value }))
                   }
                   placeholder="e.g. 65"
-                  className="mt-1 w-28 rounded border border-line bg-surface2 px-2 py-1.5 text-ink placeholder:text-mute focus:border-gold focus:outline-none disabled:opacity-50"
+                  className="mt-1 w-28 rounded border border-line bg-surface2 px-2 py-1.5 text-ink placeholder:text-mute focus:border-orange focus:outline-none disabled:opacity-50"
                 />
               </div>
             )}
@@ -160,11 +252,11 @@ export default function PicksForm({
         <button
           onClick={handleSubmit}
           disabled={isPending}
-          className="rounded bg-gold px-5 py-2 font-medium text-field hover:bg-gold/90 disabled:opacity-60"
+          className="rounded bg-orange px-5 py-2 font-medium text-field hover:bg-orange/90 disabled:opacity-60"
         >
           {isPending ? "Saving..." : "Save picks"}
         </button>
-        {savedAt && <span className="text-sm text-turf">Saved ✓</span>}
+        {savedAt && <span className="text-sm text-tan">Saved ✓</span>}
         {error && <span className="text-sm text-loss">{error}</span>}
       </div>
     </div>

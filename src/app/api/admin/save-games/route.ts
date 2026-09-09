@@ -35,6 +35,12 @@ export async function POST(request: Request) {
     kickoff_time: g.kickoff_time,
     is_tiebreaker: !!g.is_tiebreaker,
     external_id: g.external_id ?? null,
+    home_rank: g.home_rank ?? null,
+    away_rank: g.away_rank ?? null,
+    home_record: g.home_record ?? null,
+    away_record: g.away_record ?? null,
+    home_ppg: g.home_ppg ?? null,
+    away_ppg: g.away_ppg ?? null,
   }));
 
   const { error: insertError } = await supabase.from("games").insert(rows);

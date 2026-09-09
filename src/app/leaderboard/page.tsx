@@ -61,7 +61,7 @@ export default async function LeaderboardPage() {
       <h1 className="font-display text-3xl font-semibold text-ink">Standings</h1>
 
       <section className="mt-6">
-        <h2 className="font-display text-lg text-gold">Season</h2>
+        <h2 className="font-display text-lg text-orange">Season</h2>
         <div className="mt-3 divide-y divide-line rounded border border-line bg-surface">
           {(cumulative ?? []).length === 0 && (
             <p className="p-4 text-sm text-mute">No scores yet.</p>
@@ -72,7 +72,7 @@ export default async function LeaderboardPage() {
                 <span className="w-5 text-mute">{i + 1}</span>
                 <span className="text-ink">{row.profiles?.display_name}</span>
               </div>
-              <span className="font-display text-lg text-gold">{row.total_points}</span>
+              <span className="font-display text-lg text-orange">{row.total_points}</span>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PicksForm from "@/components/PicksForm";
+import { sortByRankThenSpread } from "@/lib/scoring";
 
 export default async function PicksPage() {
   const supabase = createClient();
@@ -23,9 +24,12 @@ export default async function PicksPage() {
 
   const { data: games } = await supabase
     .from("games")
-    .select("id, home_team, away_team, spread, kickoff_time, is_tiebreaker")
-    .eq("week_id", week.id)
-    .order("kickoff_time", { ascending: true });
+    .select(
+      "id, home_team, away_team, spread, kickoff_time, is_tiebreaker, home_rank, away_rank, home_record, away_record, home_ppg, away_ppg"
+    )
+    .eq("week_id", week.id);
+
+  const sortedGames = sortByRankThenSpread(games ?? []);
 
   const { data: existingPicks } = await supabase
     .from("picks")
@@ -41,7 +45,7 @@ export default async function PicksPage() {
       <div className="mt-6">
         <PicksForm
           userId={user.id}
-          games={games ?? []}
+          games={sortedGames}
           existingPicks={(existingPicks ?? []) as any}
         />
       </div>

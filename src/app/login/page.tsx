@@ -34,7 +34,7 @@ export default function LoginPage() {
       </p>
 
       {status === "sent" ? (
-        <div className="mt-6 rounded border border-turf/40 bg-turf/10 p-4 text-sm text-ink">
+        <div className="mt-6 rounded border border-tan/40 bg-tan/10 p-4 text-sm text-ink">
           Check <span className="font-medium">{email}</span> for a sign-in link.
         </div>
       ) : (
@@ -45,12 +45,12 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full rounded border border-line bg-surface px-3 py-2 text-ink placeholder:text-mute focus:border-gold focus:outline-none"
+            className="w-full rounded border border-line bg-surface px-3 py-2 text-ink placeholder:text-mute focus:border-orange focus:outline-none"
           />
           <button
             type="submit"
             disabled={status === "sending"}
-            className="w-full rounded bg-gold px-3 py-2 font-medium text-field hover:bg-gold/90 disabled:opacity-60"
+            className="w-full rounded bg-orange px-3 py-2 font-medium text-field hover:bg-orange/90 disabled:opacity-60"
           >
             {status === "sending" ? "Sending..." : "Send sign-in link"}
           </button>

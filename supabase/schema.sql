@@ -67,6 +67,14 @@ create table if not exists games (
   away_score int,
   is_final boolean not null default false,
   external_id text,
+  -- AP Top 25 rank at the time the game was added, null if unranked
+  home_rank int,
+  away_rank int,
+  -- Team record and season scoring average at the time the game was added
+  home_record text,
+  away_record text,
+  home_ppg numeric,
+  away_ppg numeric,
   created_at timestamptz not null default now()
 );
 
@@ -191,3 +199,12 @@ create policy "picks update own before lock" on picks for update using (
 -- Admins can do anything to picks too (e.g. cleanup)
 drop policy if exists "picks admin all" on picks;
 create policy "picks admin all" on picks for all using (is_admin()) with check (is_admin());
+
+-- ---------- EXPLICIT GRANTS ----------
+-- RLS policies above only narrow down which ROWS a role can see/touch; the
+-- role still needs the base table privilege. Grant those explicitly so this
+-- works even in Postgres setups that don't inherit default privileges.
+grant usage on schema public to authenticated, anon;
+grant select, insert, update, delete on profiles, weeks, games, picks to authenticated;
+grant select on profiles, weeks, games, picks to anon;
+grant select on game_ats_winner, pick_results, weekly_scores, cumulative_scores to authenticated, anon;
