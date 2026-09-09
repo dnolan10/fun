@@ -26,7 +26,13 @@ export default async function AdminPage() {
     .select("id, week_id, home_team, away_team, spread, kickoff_time, is_tiebreaker, home_score, away_score, is_final")
     .order("kickoff_time", { ascending: true });
 
+  const { data: pickRows } = await supabase.from("picks").select("game_id");
+  const pickCounts: Record<number, number> = {};
+  for (const row of pickRows ?? []) {
+    pickCounts[row.game_id] = (pickCounts[row.game_id] ?? 0) + 1;
+  }
+
   return (
-    <AdminDashboard weeks={weeks ?? []} games={games ?? []} />
+    <AdminDashboard weeks={weeks ?? []} games={games ?? []} pickCounts={pickCounts} />
   );
 }

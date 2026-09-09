@@ -21,7 +21,7 @@ export function rankLabel(rank: number | null | undefined) {
 export function statLine(record: string | null | undefined, ppg: number | null | undefined) {
   const parts = [];
   if (record) parts.push(record);
-  if (ppg != null) parts.push(`${ppg} pts/gm`);
+  if (ppg != null) parts.push(`${ppg} pts/gm (pool)`);
   return parts.join(" · ");
 }
 

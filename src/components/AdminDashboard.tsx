@@ -39,7 +39,15 @@ type OddsGame = {
   away_ppg: number | null;
 };
 
-export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games: Game[] }) {
+export default function AdminDashboard({
+  weeks,
+  games,
+  pickCounts,
+}: {
+  weeks: Week[];
+  games: Game[];
+  pickCounts: Record<number, number>;
+}) {
   const router = useRouter();
 
   // --- Create week ---
@@ -154,6 +162,105 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
       alert(error);
     }
   }
+
+  // --- Manage existing games (edit spread/kickoff/tiebreaker, delete) ---
+  const [manageWeekId, setManageWeekId] = useState<number | "">(weeks[0]?.id ?? "");
+  const [rowEdits, setRowEdits] = useState<Record<number, { spread: string; kickoff: string }>>(
+    {}
+  );
+  const [savingGameId, setSavingGameId] = useState<number | null>(null);
+  const [deletingGameId, setDeletingGameId] = useState<number | null>(null);
+
+  function toLocalInputValue(iso: string) {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+  }
+
+  function getRowEdit(g: Game) {
+    return rowEdits[g.id] ?? { spread: String(g.spread), kickoff: toLocalInputValue(g.kickoff_time) };
+  }
+
+  async function saveGameEdit(g: Game) {
+    const edit = getRowEdit(g);
+    setSavingGameId(g.id);
+    const res = await fetch("/api/admin/update-game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        game_id: g.id,
+        spread: Number(edit.spread),
+        kickoff_time: new Date(edit.kickoff).toISOString(),
+      }),
+    });
+    setSavingGameId(null);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
+
+  async function makeTiebreaker(g: Game) {
+    const res = await fetch("/api/admin/update-game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ game_id: g.id, is_tiebreaker: true }),
+    });
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
+
+  async function deleteGame(g: Game) {
+    const warning = g.is_final
+      ? "This game already has a final score. Deleting it removes it and everyone's picks for it from scoring. Continue?"
+      : "Delete this game? Any picks already made for it will be removed too.";
+    if (!confirm(warning)) return;
+    setDeletingGameId(g.id);
+    const res = await fetch("/api/admin/delete-game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ game_id: g.id }),
+    });
+    setDeletingGameId(null);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
+
+  const gamesForManage = games
+    .filter((g) => g.week_id === manageWeekId)
+    .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime());
+
+  const [togglingPublish, setTogglingPublish] = useState(false);
+
+  async function togglePublish(week: Week) {
+    setTogglingPublish(true);
+    const res = await fetch("/api/admin/toggle-publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week_id: week.id, is_published: !week.is_published }),
+    });
+    setTogglingPublish(false);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
+
+  const manageWeek = weeks.find((w) => w.id === manageWeekId);
 
   const unpublishedOrRecentWeeks = weeks;
   const needsResults = games.filter((g) => !g.is_final && isLocked(g.kickoff_time));
@@ -310,9 +417,133 @@ export default function AdminDashboard({ weeks, games }: { weeks: Week[]; games:
         )}
       </section>
 
+      {/* Manage an existing week */}
+      <section className="rounded border border-line bg-surface p-4">
+        <h2 className="font-display text-lg text-orange">3. Manage a week</h2>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <select
+            value={manageWeekId}
+            onChange={(e) => setManageWeekId(e.target.value ? Number(e.target.value) : "")}
+            className="rounded border border-line bg-surface2 px-2 py-1.5 text-ink"
+          >
+            <option value="">Choose a week...</option>
+            {weeks.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.label} {w.is_published ? "(published)" : "(draft)"}
+              </option>
+            ))}
+          </select>
+          {manageWeek && (
+            <button
+              onClick={() => togglePublish(manageWeek)}
+              disabled={togglingPublish}
+              className={`rounded px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+                manageWeek.is_published
+                  ? "border border-loss text-loss hover:bg-loss/10"
+                  : "bg-orange text-field hover:bg-orange/90"
+              }`}
+            >
+              {togglingPublish
+                ? "Working..."
+                : manageWeek.is_published
+                ? "Unpublish this week"
+                : "Publish this week"}
+            </button>
+          )}
+        </div>
+
+        {manageWeekId && (
+          <div className="mt-4 space-y-2">
+            {gamesForManage.length === 0 && (
+              <p className="text-sm text-mute">This week has no games yet — add some above.</p>
+            )}
+            {gamesForManage.map((g) => {
+              const edit = getRowEdit(g);
+              const count = pickCounts[g.id] ?? 0;
+              const locked = isLocked(g.kickoff_time);
+              return (
+                <div
+                  key={g.id}
+                  className={`rounded border p-3 ${
+                    g.is_tiebreaker ? "border-orange/50 bg-orange/5" : "border-line bg-surface2"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm text-ink">
+                      {g.away_team} @ {g.home_team}
+                      {g.is_tiebreaker && (
+                        <span className="ml-2 text-xs font-medium text-orange">TIEBREAKER</span>
+                      )}
+                      {locked && <span className="ml-2 text-xs text-loss">Locked</span>}
+                    </div>
+                    <span className="text-xs text-mute">
+                      {count > 0 ? `${count} pick${count === 1 ? "" : "s"} made` : "No picks yet"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-end gap-3">
+                    <label className="text-xs text-mute">
+                      Home spread
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={edit.spread}
+                        onChange={(e) =>
+                          setRowEdits((prev) => ({
+                            ...prev,
+                            [g.id]: { ...edit, spread: e.target.value },
+                          }))
+                        }
+                        className="ml-2 w-20 rounded border border-line bg-field px-2 py-1 text-ink"
+                      />
+                    </label>
+                    <label className="text-xs text-mute">
+                      Kickoff
+                      <input
+                        type="datetime-local"
+                        value={edit.kickoff}
+                        onChange={(e) =>
+                          setRowEdits((prev) => ({
+                            ...prev,
+                            [g.id]: { ...edit, kickoff: e.target.value },
+                          }))
+                        }
+                        className="ml-2 rounded border border-line bg-field px-2 py-1 text-ink"
+                      />
+                    </label>
+                    <button
+                      onClick={() => saveGameEdit(g)}
+                      disabled={savingGameId === g.id}
+                      className="rounded bg-tan px-3 py-1.5 text-xs text-ink hover:bg-tan/90 disabled:opacity-60"
+                    >
+                      {savingGameId === g.id ? "Saving..." : "Save changes"}
+                    </button>
+                    {!g.is_tiebreaker && (
+                      <button
+                        onClick={() => makeTiebreaker(g)}
+                        className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+                      >
+                        Make tiebreaker
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteGame(g)}
+                      disabled={deletingGameId === g.id}
+                      className="rounded border border-loss px-3 py-1.5 text-xs text-loss hover:bg-loss/10 disabled:opacity-60"
+                    >
+                      {deletingGameId === g.id ? "Removing..." : "Remove game"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Enter results */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-orange">3. Enter final scores</h2>
+        <h2 className="font-display text-lg text-orange">4. Enter final scores</h2>
         <p className="mt-1 text-xs text-mute">
           Scoring, weekly winners, and the cumulative leaderboard update automatically once you
           save a final score.

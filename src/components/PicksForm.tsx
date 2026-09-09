@@ -17,7 +17,18 @@ type Game = {
   away_record: string | null;
   home_ppg: number | null;
   away_ppg: number | null;
+  home_score: number | null;
+  away_score: number | null;
+  is_final: boolean;
 };
+
+function atsResult(g: Game, pick: "home" | "away" | undefined) {
+  if (!g.is_final || g.home_score == null || g.away_score == null || !pick) return null;
+  const margin = g.home_score - g.away_score + g.spread;
+  const winner = margin > 0 ? "home" : margin < 0 ? "away" : "push";
+  if (winner === "push") return "push";
+  return winner === pick ? "correct" : "incorrect";
+}
 
 type ExistingPick = {
   game_id: number;
@@ -115,58 +126,64 @@ export default function PicksForm({
   }
 
   const pickedCount = games.filter((g) => picks[g.id]).length;
+  const anyUnlocked = games.some((g) => !isLocked(g.kickoff_time));
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 rounded border border-line bg-surface p-3">
-        <span className="w-full text-xs text-mute sm:w-auto sm:self-center">Quick pick:</span>
-        <button
-          type="button"
-          onClick={() => applyQuickPick("home")}
-          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
-        >
-          All home teams
-        </button>
-        <button
-          type="button"
-          onClick={() => applyQuickPick("away")}
-          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
-        >
-          All away teams
-        </button>
-        <button
-          type="button"
-          onClick={() => applyQuickPick("favorites")}
-          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
-        >
-          All favorites
-        </button>
-        <button
-          type="button"
-          onClick={() => applyQuickPick("underdogs")}
-          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
-        >
-          All underdogs
-        </button>
-        <button
-          type="button"
-          onClick={() => applyQuickPick("random")}
-          className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
-        >
-          Random
-        </button>
-        <button
-          type="button"
-          onClick={clearPicks}
-          className="rounded border border-line px-3 py-1.5 text-xs text-loss hover:border-loss"
-        >
-          Clear
-        </button>
-      </div>
+      {anyUnlocked && (
+        <div className="flex flex-wrap gap-2 rounded border border-line bg-surface p-3">
+          <span className="w-full text-xs text-mute sm:w-auto sm:self-center">Quick pick:</span>
+          <button
+            type="button"
+            onClick={() => applyQuickPick("home")}
+            className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+          >
+            All home teams
+          </button>
+          <button
+            type="button"
+            onClick={() => applyQuickPick("away")}
+            className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+          >
+            All away teams
+          </button>
+          <button
+            type="button"
+            onClick={() => applyQuickPick("favorites")}
+            className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+          >
+            All favorites
+          </button>
+          <button
+            type="button"
+            onClick={() => applyQuickPick("underdogs")}
+            className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+          >
+            All underdogs
+          </button>
+          <button
+            type="button"
+            onClick={() => applyQuickPick("random")}
+            className="rounded border border-line px-3 py-1.5 text-xs text-ink hover:border-orange hover:text-orange"
+          >
+            Random
+          </button>
+          <button
+            type="button"
+            onClick={clearPicks}
+            className="rounded border border-line px-3 py-1.5 text-xs text-loss hover:border-loss"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       <p className="text-sm text-mute">
         You&apos;ve picked <span className="text-orange">{pickedCount}</span> of {games.length}{" "}
-        games. Tap any game below to change your pick until it locks at kickoff.
+        games.
+        {anyUnlocked
+          ? " Tap any game below to change your pick until it locks at kickoff."
+          : " This week is complete — all games have kicked off."}
       </p>
 
       {games.map((g) => {
@@ -195,8 +212,25 @@ export default function PicksForm({
                 </span>
               )}
               {locked && <span className="font-medium text-loss">Locked</span>}
-              {pick && !locked && <span className="font-medium text-orange">Your pick: {pick === "home" ? g.home_team : g.away_team}</span>}
+              {pick && <span className="font-medium text-orange">Your pick: {pick === "home" ? g.home_team : g.away_team}</span>}
             </div>
+
+            {g.is_final && g.home_score != null && g.away_score != null && (
+              <div className="mt-1 flex items-center gap-2 text-xs">
+                <span className="text-mute">
+                  Final: {g.away_team} {g.away_score} — {g.home_team} {g.home_score}
+                </span>
+                {(() => {
+                  const result = atsResult(g, pick);
+                  if (result === "correct")
+                    return <span className="font-medium text-tan">✓ You covered</span>;
+                  if (result === "incorrect")
+                    return <span className="font-medium text-loss">✗ Missed it</span>;
+                  if (result === "push") return <span className="text-mute">Push</span>;
+                  return null;
+                })()}
+              </div>
+            )}
 
             <div className="mt-3 grid grid-cols-2 gap-3">
               <button
@@ -256,17 +290,19 @@ export default function PicksForm({
         );
       })}
 
-      <div className="sticky bottom-4 flex items-center gap-3 rounded border border-line bg-surface2/95 p-3 backdrop-blur">
-        <button
-          onClick={handleSubmit}
-          disabled={isPending}
-          className="rounded bg-orange px-5 py-2 font-medium text-field hover:bg-orange/90 disabled:opacity-60"
-        >
-          {isPending ? "Saving..." : "Save picks"}
-        </button>
-        {savedAt && <span className="text-sm text-tan">Saved ✓</span>}
-        {error && <span className="text-sm text-loss">{error}</span>}
-      </div>
+      {anyUnlocked && (
+        <div className="sticky bottom-4 flex items-center gap-3 rounded border border-line bg-surface2/95 p-3 backdrop-blur">
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="rounded bg-orange px-5 py-2 font-medium text-field hover:bg-orange/90 disabled:opacity-60"
+          >
+            {isPending ? "Saving..." : "Save picks"}
+          </button>
+          {savedAt && <span className="text-sm text-tan">Saved ✓</span>}
+          {error && <span className="text-sm text-loss">{error}</span>}
+        </div>
+      )}
     </div>
   );
 }
