@@ -1,0 +1,10 @@
+{
+  "crons": [
+    { "path": "/api/cron/fetch-scores", "schedule": "0 13 * * 2-5" },
+    { "path": "/api/cron/fetch-scores", "schedule": "0 20 * * 6" },
+    { "path": "/api/cron/fetch-scores", "schedule": "0 23 * * 6" },
+    { "path": "/api/cron/fetch-scores", "schedule": "0 2 * * 0" },
+    { "path": "/api/cron/fetch-scores", "schedule": "59 3 * * 0" },
+    { "path": "/api/cron/fetch-scores", "schedule": "0 16 * * 0" }
+  ]
+}

@@ -155,6 +155,35 @@ Repeat steps 2–6 each week of the season.
 - **Mobile**: the nav collapses into a menu button below tablet width, and the site now
   ships a proper viewport tag so pages render at actual phone width instead of a
   zoomed-out desktop layout. This is a responsive website, not an installable app.
+- **Cumulative records & clear final scores**: Standings and the Scorecard show each
+  person's season win-loss record against the spread (hover an icon to see it too), and
+  final games on the Scorecard spell out who covered and by how much instead of making
+  you do the spread math yourself.
+
+## Automatic final scores (cron)
+
+Instead of typing in every score by hand, a scheduled job automatically fetches completed
+results from the Odds API and marks games final. It's the same logic as the **Fetch final
+scores automatically** button in Admin, just run on a timer instead of a click.
+
+**One-time setup:**
+1. Generate a secret: `openssl rand -hex 32`.
+2. In Vercel → Project → Settings → Environment Variables, add `CRON_SECRET` with that
+   value (all environments).
+3. Redeploy so the new env var takes effect.
+
+The schedule (defined in [`vercel.json`](./vercel.json)) runs:
+- 9:00 AM ET, Tuesday–Friday (catches any midweek games from the night before)
+- Saturday at 4:00 PM, 7:00 PM, 10:00 PM, and 11:59 PM ET
+- Sunday at 12:00 PM ET (a final pass to close out the week)
+
+Two things worth knowing:
+- **Vercel Cron always runs in UTC**, and these times were converted assuming Eastern
+  Daylight Time (UTC-4). When clocks fall back to EST in early November, every time above
+  will effectively run **one hour earlier** in local time until the schedule is updated —
+  low-stakes since games are already over by then, but worth knowing.
+- **Hobby-plan cron jobs aren't precise** — Vercel only guarantees a trigger sometime within
+  the scheduled hour, not the exact minute.
 
 ## Notes & limitations (MVP)
 
