@@ -17,10 +17,14 @@ export async function syncFinalScores(supabase: any): Promise<ScoreSyncResult | 
     return { error: "ODDS_API_KEY is not set", status: 500 };
   }
 
+  // Only ever touch games in a published week -- a draft/abandoned week
+  // nobody can see shouldn't silently get final scores and start counting
+  // toward anyone's record.
   const { data: games, error: fetchError } = await supabase
     .from("games")
-    .select("id, home_team, away_team, external_id")
-    .eq("is_final", false);
+    .select("id, home_team, away_team, external_id, weeks!inner(is_published)")
+    .eq("is_final", false)
+    .eq("weeks.is_published", true);
   if (fetchError) return { error: fetchError.message, status: 400 };
 
   const pending = (games ?? []).filter((g: any) => g.external_id);
