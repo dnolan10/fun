@@ -101,7 +101,7 @@ export default async function ScorecardPage({
       </div>
       <p className="mt-1 text-xs text-mute">
         Icons show who&apos;s on each side once a game locks —{" "}
-        <span className="text-tan">tan ring</span> = covered the spread,{" "}
+        <span className="text-win">green ring</span> = covered the spread,{" "}
         <span className="text-loss">red ring</span> = missed it.
       </p>
 
@@ -159,7 +159,7 @@ export default async function ScorecardPage({
                     const margin = atsMargin(g);
                     const winnerName = winnerSide === "home" ? g.home_team : g.away_team;
                     return (
-                      <span className="ml-2 text-tan">
+                      <span className="ml-2 text-win">
                         {winnerName} covers by {Math.abs(margin!)}
                       </span>
                     );
@@ -236,7 +236,7 @@ function TeamSide({
       </div>
       {score != null && <div className="mt-0.5 font-display text-lg text-ink">{score}</div>}
 
-      <div className="mt-2 flex min-h-[1.75rem] flex-wrap gap-1">
+      <div className="mt-2 flex min-h-[1.75rem] flex-wrap gap-2">
         {!locked ? (
           <span className="text-[10px] text-mute">Locks at kickoff</span>
         ) : picks.length === 0 ? (

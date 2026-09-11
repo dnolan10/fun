@@ -230,7 +230,7 @@ export default function PicksForm({
                 {(() => {
                   const result = atsResult(g, pick);
                   if (result === "correct")
-                    return <span className="font-medium text-tan">✓ You covered</span>;
+                    return <span className="font-medium text-win">✓ You covered</span>;
                   if (result === "incorrect")
                     return <span className="font-medium text-loss">✗ Missed it</span>;
                   if (result === "push") return <span className="text-mute">Push</span>;

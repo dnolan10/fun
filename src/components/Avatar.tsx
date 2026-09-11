@@ -27,7 +27,11 @@ export default function Avatar({
 }) {
   const name = profile?.display_name || "?";
   const ringClass =
-    ring === "correct" ? "ring-2 ring-tan" : ring === "incorrect" ? "ring-2 ring-loss" : "ring-1 ring-line";
+    ring === "correct"
+      ? "ring-[3px] ring-win"
+      : ring === "incorrect"
+      ? "ring-[3px] ring-loss"
+      : "ring-1 ring-line";
 
   let content;
   if (profile?.avatar_type === "photo" && profile.avatar_url) {

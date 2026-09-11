@@ -13,7 +13,8 @@ const config: Config = {
         tan: "#D9A05B",
         ink: "#F5EDE4",
         mute: "#B49A85",
-        loss: "#C1462E",
+        loss: "#E5484D",
+        win: "#3FB950",
       },
       fontFamily: {
         display: ["var(--font-oswald)", "sans-serif"],

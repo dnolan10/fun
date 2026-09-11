@@ -63,7 +63,7 @@ export default async function ProfilePage() {
             {streak !== 0 && (
               <p>
                 {streak > 0 ? (
-                  <span className="text-tan">🔥 {streak} correct in a row</span>
+                  <span className="text-win">🔥 {streak} correct in a row</span>
                 ) : (
                   <span className="text-loss">❄️ {Math.abs(streak)} missed in a row</span>
                 )}
