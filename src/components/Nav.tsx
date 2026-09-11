@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import NavLinks from "@/components/NavLinks";
 
 export default async function Nav() {
   const supabase = createClient();
@@ -9,14 +10,22 @@ export default async function Nav() {
 
   let isAdmin = false;
   let displayName = "";
+  let avatarProfile = null as null | {
+    display_name: string;
+    avatar_type: string | null;
+    avatar_emoji: string | null;
+    avatar_color: string | null;
+    avatar_url: string | null;
+  };
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_admin, display_name")
+      .select("is_admin, display_name, avatar_type, avatar_emoji, avatar_color, avatar_url")
       .eq("id", user.id)
       .single();
     isAdmin = !!profile?.is_admin;
     displayName = profile?.display_name ?? "";
+    if (profile) avatarProfile = profile;
   }
 
   return (
@@ -25,44 +34,16 @@ export default async function Nav() {
         <Link href="/" className="font-display text-xl font-semibold tracking-tight text-ink">
           The Sic 'Em Sheet
         </Link>
-        <nav className="flex items-center gap-5 text-sm text-mute">
-          {user ? (
-            <>
-              <Link href="/picks" className="hover:text-ink">
-                Picks
-              </Link>
-              <Link href="/leaderboard" className="hover:text-ink">
-                Standings
-              </Link>
-              <Link href="/feedback" className="hover:text-orange" title="Flag on the Play">
-                🚩
-              </Link>
-              {isAdmin && (
-                <Link href="/admin" className="hover:text-orange">
-                  Admin
-                </Link>
-              )}
-              {isAdmin && (
-                <Link href="/admin/feedback" className="hover:text-orange">
-                  Flags
-                </Link>
-              )}
-              <span className="hidden text-mute sm:inline">{displayName}</span>
-              <form action="/auth/signout" method="post">
-                <button className="rounded border border-line px-3 py-1.5 text-ink hover:border-orange hover:text-orange">
-                  Sign out
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="rounded bg-orange px-3 py-1.5 font-medium text-field hover:bg-orange/90"
-            >
-              Sign in
-            </Link>
-          )}
-        </nav>
+        {user ? (
+          <NavLinks isAdmin={isAdmin} displayName={displayName} avatarProfile={avatarProfile} />
+        ) : (
+          <Link
+            href="/login"
+            className="rounded bg-orange px-3 py-1.5 font-medium text-field hover:bg-orange/90"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
     </header>
   );

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import PickProgressBanner from "@/components/PickProgressBanner";
+import { getWeekPickCompletion } from "@/lib/pickProgress";
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -39,6 +41,18 @@ export default async function HomePage() {
     .limit(1)
     .maybeSingle();
 
+  let progressBanner = null;
+  if (week) {
+    const { data: games } = await supabase
+      .from("games")
+      .select("home_team, away_team, kickoff_time")
+      .eq("week_id", week.id);
+    const completion = await getWeekPickCompletion(supabase, week.id);
+    progressBanner = (
+      <PickProgressBanner games={games ?? []} completion={completion} currentUserId={user.id} />
+    );
+  }
+
   return (
     <div>
       <h1 className="font-display text-3xl font-semibold text-ink">Welcome back, fellow degenerate</h1>
@@ -46,12 +60,18 @@ export default async function HomePage() {
         <div className="mt-6 rounded border border-line bg-surface p-5">
           <p className="text-sm uppercase tracking-wide text-mute">Current week</p>
           <p className="mt-1 font-display text-xl text-ink">{week.label}</p>
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/picks"
               className="rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90"
             >
               Make your picks
+            </Link>
+            <Link
+              href="/scorecard"
+              className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange"
+            >
+              View scorecard
             </Link>
             <Link
               href="/leaderboard"
@@ -64,6 +84,7 @@ export default async function HomePage() {
       ) : (
         <p className="mt-6 text-mute">No week has been published yet — check back soon.</p>
       )}
+      {progressBanner && <div className="mt-4">{progressBanner}</div>}
     </div>
   );
 }

@@ -1,3 +1,56 @@
+export type ATSGame = {
+  spread: number;
+  home_score: number | null;
+  away_score: number | null;
+  is_final: boolean;
+};
+
+// Result of a single pick against the spread, null until the game is final.
+export function atsResult(
+  g: ATSGame,
+  pick: "home" | "away" | null | undefined
+): "correct" | "incorrect" | "push" | null {
+  if (!g.is_final || g.home_score == null || g.away_score == null || !pick) return null;
+  const margin = g.home_score - g.away_score + g.spread;
+  const winner = margin > 0 ? "home" : margin < 0 ? "away" : "push";
+  if (winner === "push") return "push";
+  return winner === pick ? "correct" : "incorrect";
+}
+
+// Given a user's past picks ordered most-recent-first, how many in a row
+// they've gotten right (positive) or wrong (negative). Pushes don't count
+// either way and don't break the streak.
+export function currentStreak(resultsMostRecentFirst: Array<"correct" | "incorrect" | "push">): number {
+  let streak = 0;
+  let direction: "correct" | "incorrect" | null = null;
+  for (const result of resultsMostRecentFirst) {
+    if (result === "push") continue;
+    if (direction === null) {
+      direction = result;
+      streak = 1;
+    } else if (result === direction) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return direction === "incorrect" ? -streak : streak;
+}
+
+// Signed margin against the spread, from the home team's perspective. Null
+// until the game is final. 0 = an exact push.
+export function atsMargin(g: ATSGame): number | null {
+  if (!g.is_final || g.home_score == null || g.away_score == null) return null;
+  return g.home_score - g.away_score + g.spread;
+}
+
+// A game that came down to the wire against the spread -- a push or a
+// margin within `threshold` points either way.
+export function isCloseCall(g: ATSGame, threshold = 3): boolean {
+  const margin = atsMargin(g);
+  return margin != null && Math.abs(margin) <= threshold;
+}
+
 export function formatSpread(spread: number, side: "home" | "away") {
   // spread is stored relative to the home team.
   const effective = side === "home" ? spread : -spread;

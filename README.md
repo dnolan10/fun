@@ -122,6 +122,37 @@ Repeat steps 2–6 each week of the season.
 - The **Standings** page shows both the current week's results and the season-long
   cumulative leaderboard.
 
+## Scorecard, avatars & reminders
+
+- **Scorecard** (`/scorecard`): a compact, game-by-game view of the current week — each
+  matchup shows small icons for everyone clustered on whichever side they picked, so you
+  can see at a glance who covered and who didn't once a game locks. It respects the same
+  privacy rule as everything else: nobody's pick shows up until that game's kickoff passes.
+- **Icons**: every player can set their own icon from **the icon link in the top nav**
+  (next to their name) — a colored initial (the default), a fun emoji, or an uploaded
+  photo. This needs one extra one-time setup step:
+  - Run [`supabase/migrations/005_avatars_and_progress.sql`](./supabase/migrations/005_avatars_and_progress.sql)
+    in the Supabase SQL Editor. It adds the avatar columns to `profiles`, creates a public
+    `avatars` Storage bucket for uploaded photos (each person can only write to their own
+    folder in it), and adds a `week_pick_completion` function used by the reminder banner
+    below.
+- **Lock-deadline reminders**: the home page and Picks page show a small banner with the
+  time until the next game locks and who still hasn't submitted a full slate for the week
+  (not what they picked — just whether they've picked yet).
+- **Weekly champion callout**: once every game in a week is final, the Standings page
+  highlights that week's top scorer(s).
+- **Your stats**: the icon page also shows your season record against the spread and your
+  current streak.
+- **Close call flagging**: on the Scorecard, any final game decided by 3 points or less
+  against the spread (or an exact push) gets a small "🔥 Close call" badge.
+- **Trash Talk** (`/trash-talk`): a live group chat for the pool — messages show up for
+  everyone instantly, no refresh needed. Needs one more migration:
+  [`supabase/migrations/006_trash_talk.sql`](./supabase/migrations/006_trash_talk.sql).
+  It creates the `trash_talk` table and turns on Supabase Realtime for it.
+- **Mobile**: the nav collapses into a menu button below tablet width, and the site now
+  ships a proper viewport tag so pages render at actual phone width instead of a
+  zoomed-out desktop layout. This is a responsive website, not an installable app.
+
 ## Notes & limitations (MVP)
 
 - Admin status is granted by editing the `is_admin` column directly in Supabase's table

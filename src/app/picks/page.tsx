@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PicksForm from "@/components/PicksForm";
 import WeekSelector from "@/components/WeekSelector";
+import PickProgressBanner from "@/components/PickProgressBanner";
 import { sortByRankThenSpread } from "@/lib/scoring";
+import { getWeekPickCompletion } from "@/lib/pickProgress";
 
 export default async function PicksPage({
   searchParams,
@@ -42,15 +44,20 @@ export default async function PicksPage({
     .select("game_id, picked_team, tiebreaker_guess")
     .eq("user_id", user.id);
 
+  const completion = await getWeekPickCompletion(supabase, week.id);
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-semibold text-ink">{week.label}</h1>
-        {weeks.length > 1 && <WeekSelector weeks={weeks} selectedWeekId={week.id} />}
+        {weeks.length > 1 && <WeekSelector weeks={weeks} selectedWeekId={week.id} basePath="/picks" />}
       </div>
       <p className="mt-1 text-sm text-mute">
         Pick each game against the spread. Picks lock automatically at kickoff.
       </p>
+      <div className="mt-4">
+        <PickProgressBanner games={sortedGames} completion={completion} currentUserId={user.id} />
+      </div>
       <div className="mt-6">
         <PicksForm
           userId={user.id}

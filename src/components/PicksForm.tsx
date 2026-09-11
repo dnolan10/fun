@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatSpread, isLocked, rankLabel, statLine } from "@/lib/scoring";
+import { atsResult, formatSpread, isLocked, rankLabel, statLine } from "@/lib/scoring";
 
 type Game = {
   id: number;
@@ -21,14 +21,6 @@ type Game = {
   away_score: number | null;
   is_final: boolean;
 };
-
-function atsResult(g: Game, pick: "home" | "away" | undefined) {
-  if (!g.is_final || g.home_score == null || g.away_score == null || !pick) return null;
-  const margin = g.home_score - g.away_score + g.spread;
-  const winner = margin > 0 ? "home" : margin < 0 ? "away" : "push";
-  if (winner === "push") return "push";
-  return winner === pick ? "correct" : "incorrect";
-}
 
 type ExistingPick = {
   game_id: number;
@@ -258,7 +250,7 @@ export default function PicksForm({
                     : "border-line text-ink hover:border-orange/60"
                 }`}
               >
-                <div className="font-display text-lg">
+                <div className="font-display text-base leading-tight sm:text-lg">
                   {rankLabel(g.away_rank)}
                   {g.away_team}
                 </div>
@@ -275,7 +267,7 @@ export default function PicksForm({
                     : "border-line text-ink hover:border-orange/60"
                 }`}
               >
-                <div className="font-display text-lg">
+                <div className="font-display text-base leading-tight sm:text-lg">
                   {rankLabel(g.home_rank)}
                   {g.home_team}
                 </div>
