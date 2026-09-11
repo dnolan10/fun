@@ -101,8 +101,11 @@ Your site is now live at that URL. Share it with your friends.
 5. Send your friends the site link. They sign in with their email, go to **Picks**, and
    pick each game against the spread plus a total-score guess on the tiebreaker game.
    Picks lock automatically the moment each game kicks off.
-6. After games finish, go back to **Admin → Enter final scores**, type in the final score
-   for each game, and hit **Save result**. Standings on the **Standings** page update
+6. After games finish, go back to **Admin → Enter final scores** and click
+   **Fetch final scores automatically** — it pulls completed results straight from the Odds
+   API for any game that was added that way. Only games added manually (not through "Pull
+   current NCAAF odds") need a score typed in and **Save result** clicked by hand. Standings
+   on the **Standings** page update
    instantly — no manual math.
 
 Repeat steps 2–6 each week of the season.

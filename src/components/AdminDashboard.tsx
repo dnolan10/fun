@@ -277,6 +277,30 @@ export default function AdminDashboard({
 
   const [togglingPublish, setTogglingPublish] = useState(false);
   const [refreshingStats, setRefreshingStats] = useState(false);
+  const [fetchingScores, setFetchingScores] = useState(false);
+
+  async function fetchScores() {
+    setFetchingScores(true);
+    const res = await fetch("/api/admin/fetch-scores", { method: "POST" });
+    setFetchingScores(false);
+    if (res.ok) {
+      const { gamesUpdated, gamesChecked, gamesStillInProgress, gamesNeedingManualEntry, warnings } =
+        await res.json();
+      let msg =
+        gamesChecked === 0
+          ? "No games with an odds-API id are waiting on a result."
+          : `Updated ${gamesUpdated}/${gamesChecked} game${gamesChecked === 1 ? "" : "s"} with final scores.`;
+      if (gamesStillInProgress > 0) msg += ` ${gamesStillInProgress} still in progress.`;
+      if (gamesNeedingManualEntry > 0)
+        msg += ` ${gamesNeedingManualEntry} game${gamesNeedingManualEntry === 1 ? "" : "s"} need manual entry (no odds-API match, e.g. added by hand).`;
+      if (warnings?.length) msg += `\n\n${warnings.join("\n")}`;
+      alert(msg);
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
 
   async function refreshStats() {
     if (!selectedWeekId) return;
@@ -641,10 +665,21 @@ export default function AdminDashboard({
 
       {/* Enter results */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-orange">3. Enter final scores</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg text-orange">3. Enter final scores</h2>
+          <button
+            onClick={fetchScores}
+            disabled={fetchingScores}
+            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+          >
+            {fetchingScores ? "Checking..." : "Fetch final scores automatically"}
+          </button>
+        </div>
         <p className="mt-1 text-xs text-mute">
-          Scoring, weekly winners, and the cumulative leaderboard update automatically once you
-          save a final score.
+          Scoring, weekly winners, and the cumulative leaderboard update automatically once a
+          final score is saved. &quot;Fetch final scores automatically&quot; pulls completed
+          results from the Odds API for any game it was used to add (games added by hand still
+          need a manual score below).
         </p>
         <div className="mt-3 space-y-2">
           {needsResults.length === 0 && (
