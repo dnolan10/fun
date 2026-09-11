@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Avatar from "@/components/Avatar";
 import WeeklyWinnerBanner from "@/components/WeeklyWinnerBanner";
+import { getAllUserRecords } from "@/lib/records";
+import { formatRecord } from "@/lib/scoring";
 
 export default async function LeaderboardPage() {
   const supabase = createClient();
@@ -20,6 +22,8 @@ export default async function LeaderboardPage() {
     .select("id, label, week_number")
     .eq("is_published", true)
     .order("week_number", { ascending: false });
+
+  const recordByUser = await getAllUserRecords(supabase);
 
   const weekBlocks = [];
   let champBanner: { weekLabel: string; points: number; champions: string[] } | null = null;
@@ -97,16 +101,22 @@ export default async function LeaderboardPage() {
           {(cumulative ?? []).length === 0 && (
             <p className="p-4 text-sm text-mute">No scores yet.</p>
           )}
-          {(cumulative ?? []).map((row: any, i: number) => (
-            <div key={row.user_id} className="flex items-center justify-between gap-2 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="shrink-0 w-5 text-mute">{i + 1}</span>
-                <Avatar profile={row.profiles} size="sm" />
-                <span className="truncate text-ink">{row.profiles?.display_name}</span>
+          {(cumulative ?? []).map((row: any, i: number) => {
+            const rec = recordByUser.get(row.user_id) ?? { wins: 0, losses: 0, pushes: 0 };
+            const recordLabel = formatRecord(rec);
+            const name = row.profiles?.display_name ?? "Someone";
+            return (
+              <div key={row.user_id} className="flex items-center justify-between gap-2 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="shrink-0 w-5 text-mute">{i + 1}</span>
+                  <Avatar profile={row.profiles} size="sm" title={`${name} (${recordLabel})`} />
+                  <span className="truncate text-ink">{name}</span>
+                  <span className="shrink-0 text-xs text-mute">{recordLabel}</span>
+                </div>
+                <span className="shrink-0 font-display text-lg text-orange">{row.total_points}</span>
               </div>
-              <span className="shrink-0 font-display text-lg text-orange">{row.total_points}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -115,12 +125,15 @@ export default async function LeaderboardPage() {
           <h2 className="font-display text-lg text-ink">{week.label}</h2>
           <div className="mt-3 divide-y divide-line rounded border border-line bg-surface">
             {ranked.length === 0 && <p className="p-4 text-sm text-mute">No results yet.</p>}
-            {ranked.map((row: any, i: number) => (
+            {ranked.map((row: any, i: number) => {
+              const rec = recordByUser.get(row.user_id) ?? { wins: 0, losses: 0, pushes: 0 };
+              const name = row.profiles?.display_name ?? "Someone";
+              return (
               <div key={row.user_id} className="flex items-center justify-between gap-2 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="shrink-0 w-5 text-mute">{i === 0 ? "🏆" : i + 1}</span>
-                  <Avatar profile={row.profiles} size="sm" />
-                  <span className="truncate text-ink">{row.profiles?.display_name}</span>
+                  <Avatar profile={row.profiles} size="sm" title={`${name} (${formatRecord(rec)} season)`} />
+                  <span className="truncate text-ink">{name}</span>
                   {row.tiebreakerDiff != null && (
                     <span className="hidden shrink-0 text-xs text-mute sm:inline">
                       (tiebreaker off by {row.tiebreakerDiff})
@@ -129,7 +142,8 @@ export default async function LeaderboardPage() {
                 </div>
                 <span className="shrink-0 text-ink">{row.points} pts</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ))}

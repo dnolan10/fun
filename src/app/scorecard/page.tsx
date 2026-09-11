@@ -2,7 +2,18 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import WeekSelector from "@/components/WeekSelector";
 import Avatar, { type AvatarProfile } from "@/components/Avatar";
-import { atsMargin, atsResult, formatSpread, isCloseCall, isLocked, rankLabel } from "@/lib/scoring";
+import {
+  atsMargin,
+  atsResult,
+  atsWinnerSide,
+  formatRecord,
+  formatSpread,
+  isCloseCall,
+  isLocked,
+  rankLabel,
+  type UserRecord,
+} from "@/lib/scoring";
+import { getAllUserRecords } from "@/lib/records";
 
 type Game = {
   id: number;
@@ -80,6 +91,8 @@ export default async function ScorecardPage({
     picksByGame.set(p.game_id, list);
   }
 
+  const recordByUser = await getAllUserRecords(supabase);
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -137,6 +150,23 @@ export default async function ScorecardPage({
                 </div>
               </div>
 
+              {g.is_final && (
+                <p className="mt-1 text-xs text-mute">
+                  Final: {g.away_team} {g.away_score} – {g.home_team} {g.home_score}
+                  {(() => {
+                    const winnerSide = atsWinnerSide(g);
+                    if (winnerSide === "push") return <span className="ml-2">Push against the spread</span>;
+                    const margin = atsMargin(g);
+                    const winnerName = winnerSide === "home" ? g.home_team : g.away_team;
+                    return (
+                      <span className="ml-2 text-tan">
+                        {winnerName} covers by {Math.abs(margin!)}
+                      </span>
+                    );
+                  })()}
+                </p>
+              )}
+
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <TeamSide
                   label={`${rankLabel(g.away_rank)}${g.away_team}`}
@@ -146,6 +176,7 @@ export default async function ScorecardPage({
                   game={g}
                   side="away"
                   locked={locked}
+                  recordByUser={recordByUser}
                 />
                 <TeamSide
                   label={`${rankLabel(g.home_rank)}${g.home_team}`}
@@ -155,6 +186,7 @@ export default async function ScorecardPage({
                   game={g}
                   side="home"
                   locked={locked}
+                  recordByUser={recordByUser}
                 />
               </div>
 
@@ -185,6 +217,7 @@ function TeamSide({
   game,
   side,
   locked,
+  recordByUser,
 }: {
   label: string;
   spreadLabel: string;
@@ -193,6 +226,7 @@ function TeamSide({
   game: Game;
   side: "home" | "away";
   locked: boolean;
+  recordByUser: Map<string, UserRecord>;
 }) {
   return (
     <div className="min-w-0 rounded border border-line/60 bg-surface2/40 p-2">
@@ -210,13 +244,15 @@ function TeamSide({
         ) : (
           picks.map((p) => {
             const result = atsResult(game, side);
+            const rec = recordByUser.get(p.user_id) ?? { wins: 0, losses: 0, pushes: 0 };
+            const name = p.profiles?.display_name ?? "Someone";
             return (
               <Avatar
                 key={p.user_id}
                 profile={p.profiles}
                 size="sm"
                 ring={result === "correct" || result === "incorrect" ? result : null}
-                title={p.profiles?.display_name}
+                title={`${name} (${formatRecord(rec)} season)`}
               />
             );
           })

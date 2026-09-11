@@ -51,6 +51,21 @@ export function isCloseCall(g: ATSGame, threshold = 3): boolean {
   return margin != null && Math.abs(margin) <= threshold;
 }
 
+// Which side covered the spread. Null until the game is final.
+export function atsWinnerSide(g: ATSGame): "home" | "away" | "push" | null {
+  const margin = atsMargin(g);
+  if (margin == null) return null;
+  if (margin > 0) return "home";
+  if (margin < 0) return "away";
+  return "push";
+}
+
+export type UserRecord = { wins: number; losses: number; pushes: number };
+
+export function formatRecord(rec: UserRecord): string {
+  return rec.pushes > 0 ? `${rec.wins}-${rec.losses}-${rec.pushes}` : `${rec.wins}-${rec.losses}`;
+}
+
 export function formatSpread(spread: number, side: "home" | "away") {
   // spread is stored relative to the home team.
   const effective = side === "home" ? spread : -spread;
