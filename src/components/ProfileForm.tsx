@@ -28,8 +28,40 @@ export default function ProfileForm({ userId, profile }: { userId: string; profi
   const [uploading, setUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(profile.avatar_url);
 
+  const [displayName, setDisplayName] = useState(profile.display_name);
+  const [savingName, setSavingName] = useState(false);
+  const [nameSavedAt, setNameSavedAt] = useState<number | null>(null);
+  const [nameError, setNameError] = useState("");
+
+  async function saveName() {
+    const trimmed = displayName.trim();
+    if (!trimmed) {
+      setNameError("Display name can't be empty.");
+      return;
+    }
+    if (trimmed.length > 30) {
+      setNameError("Keep it under 30 characters.");
+      return;
+    }
+    setSavingName(true);
+    setNameError("");
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ display_name: trimmed })
+      .eq("id", userId);
+    setSavingName(false);
+    if (updateError) {
+      setNameError(updateError.message);
+    } else {
+      setDisplayName(trimmed);
+      setNameSavedAt(Date.now());
+      router.refresh();
+    }
+  }
+
   const previewProfile = {
-    display_name: profile.display_name,
+    display_name: displayName,
     avatar_type: tab,
     avatar_color: tab === "initial" ? color : null,
     avatar_emoji: tab === "emoji" ? emoji : null,
@@ -106,11 +138,29 @@ export default function ProfileForm({ userId, profile }: { userId: string; profi
     <div className="rounded border border-line bg-surface p-4">
       <div className="flex items-center gap-4">
         <Avatar profile={previewProfile} size="lg" />
-        <div>
-          <p className="text-sm text-ink">{profile.display_name}</p>
-          <p className="text-xs text-mute">This is how you&apos;ll show up on the scorecard and standings.</p>
+        <div className="min-w-0 flex-1">
+          <label className="block text-xs text-mute">Display name</label>
+          <div className="mt-1 flex gap-2">
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={30}
+              className="min-w-0 flex-1 rounded border border-line bg-surface2 px-2 py-1.5 text-sm text-ink placeholder:text-mute focus:border-orange focus:outline-none"
+            />
+            <button
+              onClick={saveName}
+              disabled={savingName || displayName.trim() === profile.display_name}
+              className="shrink-0 rounded bg-orange px-3 py-1.5 text-xs font-medium text-field hover:bg-orange/90 disabled:opacity-60"
+            >
+              {savingName ? "Saving..." : "Save name"}
+            </button>
+          </div>
+          {nameSavedAt && <p className="mt-1 text-xs text-tan">Saved ✓</p>}
+          {nameError && <p className="mt-1 text-xs text-loss">{nameError}</p>}
         </div>
       </div>
+      <p className="mt-2 text-xs text-mute">This is how you&apos;ll show up on the scorecard and standings.</p>
 
       <div className="mt-4 flex gap-2 border-b border-line pb-3">
         {(["initial", "emoji", "photo"] as Tab[]).map((t) => (
