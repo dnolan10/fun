@@ -159,6 +159,17 @@ Repeat steps 2–6 each week of the season.
   person's season win-loss record against the spread (hover an icon to see it too), and
   final games on the Scorecard spell out who covered and by how much instead of making
   you do the spread math yourself.
+- **Quick-pick bots**: Standings also ranks five automated "players" — Home, Away,
+  Favorites, Underdogs, and Random — computed live from results, so you can see how a
+  real strategy compares to always picking the favorite (or a coin flip).
+- **No more duplicate/wrong-week games**: "Pull current NCAAF odds" now only shows games
+  kicking off in a configurable window (defaults to 8 days out), and any game already
+  added to a week — this one or another — is grayed out and can't be added again. The
+  database also now rejects a duplicate at the schema level as a backstop; run
+  [`supabase/migrations/009_prevent_duplicate_games.sql`](./supabase/migrations/009_prevent_duplicate_games.sql)
+  (it has instructions for finding/resolving any duplicates already in your data first).
+- **Delete a whole week**: Admin's quick actions now include deleting an entire week —
+  useful for cleaning up an abandoned or duplicated week without hand-writing SQL.
 
 ## Automatic final scores (cron)
 

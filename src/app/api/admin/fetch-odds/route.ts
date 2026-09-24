@@ -16,11 +16,14 @@ async function requireAdmin() {
   return profile?.is_admin ? user : null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Admins only" }, { status: 403 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const daysAhead = Math.min(Math.max(Number(searchParams.get("days")) || 8, 1), 21);
 
   const oddsApiKey = process.env.ODDS_API_KEY;
   if (!oddsApiKey) {
@@ -36,12 +39,36 @@ export async function GET() {
     warnings.push("SPORTRADAR_API_KEY is not set -- rankings and stats will be skipped.");
   }
 
-  const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf/odds/?apiKey=${oddsApiKey}&regions=us&markets=spreads&oddsFormat=american`;
+  // The Odds API happily returns games from every future slate it has lines
+  // for, not just "this week" -- without a date window, next week's (or
+  // later) games show up right alongside this week's and are easy to select
+  // by mistake. commenceTimeFrom/To need no milliseconds, per their API.
+  const isoNoMs = (d: Date) => d.toISOString().split(".")[0] + "Z";
+  const now = new Date();
+  const to = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+  const commenceTimeFrom = isoNoMs(now);
+  const commenceTimeTo = isoNoMs(to);
+
+  const oddsUrl =
+    `https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf/odds/?apiKey=${oddsApiKey}` +
+    `&regions=us&markets=spreads&oddsFormat=american` +
+    `&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
   const oddsPromise = fetch(oddsUrl, { cache: "no-store" });
 
   const { standings, rankMap, teamIdMap, statsById } = sportradarKey
     ? await getSportradarData(sportradarKey, warnings)
     : { standings: [], rankMap: new Map(), teamIdMap: new Map(), statsById: new Map() };
+
+  // Games already in the database (any week) -- so an already-added game
+  // can be flagged instead of silently offered again.
+  const supabase = createClient();
+  const { data: existingGames } = await supabase
+    .from("games")
+    .select("external_id, weeks(label)")
+    .not("external_id", "is", null);
+  const alreadyAddedByExternalId = new Map(
+    (existingGames ?? []).map((g: any) => [g.external_id, g.weeks?.label ?? "another week"])
+  );
 
   const oddsRes = await oddsPromise;
   if (!oddsRes.ok) {
@@ -85,6 +112,7 @@ export async function GET() {
       away_ppg: awayStat?.ppg ?? null,
       home_conference: homeStat?.conference ?? null,
       away_conference: awayStat?.conference ?? null,
+      already_added_to: alreadyAddedByExternalId.get(g.id) ?? null,
     };
   });
 
@@ -101,6 +129,7 @@ export async function GET() {
       teamsWithStats: standings.length,
       oddsGamesMatchedToSportradar: matchedCount,
       oddsGamesTotal: games.length,
+      daysAhead,
       warnings,
     },
   });

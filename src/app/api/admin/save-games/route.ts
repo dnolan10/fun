@@ -44,7 +44,12 @@ export async function POST(request: Request) {
   }));
 
   const { error: insertError } = await supabase.from("games").insert(rows);
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 400 });
+  if (insertError) {
+    const message = insertError.message.includes("games_external_id_unique")
+      ? "One or more of these games has already been added to a week -- refresh the odds pull and try again."
+      : insertError.message;
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
   if (publish) {
     const { error: publishError } = await supabase

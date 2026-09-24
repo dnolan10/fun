@@ -39,6 +39,7 @@ type OddsGame = {
   away_ppg: number | null;
   home_conference: string | null;
   away_conference: string | null;
+  already_added_to: string | null;
 };
 
 type OddsDebug = {
@@ -48,6 +49,7 @@ type OddsDebug = {
   teamsWithStats: number;
   oddsGamesMatchedToSportradar: number;
   oddsGamesTotal: number;
+  daysAhead: number;
   warnings: string[];
 };
 
@@ -68,8 +70,8 @@ export default function AdminDashboard({
   const [label, setLabel] = useState("");
   const [creatingWeek, setCreatingWeek] = useState(false);
 
-  // --- One shared "which week am I working on" selector for the whole
-  // manage section below (adding games, editing games, publish toggle) ---
+  // --- One shared "which week am I working on" selector, used by every
+  // quick action and by the games-in-this-week list below ---
   const [selectedWeekId, setSelectedWeekId] = useState<number | "">(weeks[0]?.id ?? "");
 
   async function createWeek() {
@@ -92,6 +94,7 @@ export default function AdminDashboard({
   }
 
   // --- Pull odds to add games to the selected week ---
+  const [daysAhead, setDaysAhead] = useState(8);
   const [oddsGames, setOddsGames] = useState<OddsGame[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [spreadOverrides, setSpreadOverrides] = useState<Record<string, string>>({});
@@ -101,8 +104,12 @@ export default function AdminDashboard({
   const [oddsDebug, setOddsDebug] = useState<OddsDebug | null>(null);
 
   async function pullOdds() {
+    if (!selectedWeekId) {
+      alert("Choose a week first.");
+      return;
+    }
     setLoadingOdds(true);
-    const res = await fetch("/api/admin/fetch-odds");
+    const res = await fetch(`/api/admin/fetch-odds?days=${daysAhead}`);
     setLoadingOdds(false);
     if (!res.ok) {
       const { error } = await res.json();
@@ -118,6 +125,7 @@ export default function AdminDashboard({
     setSelected((prev) => {
       const next = { ...prev };
       for (const g of oddsGames) {
+        if (g.already_added_to) continue;
         if (
           (g.home_conference && conferenceMatch.test(g.home_conference)) ||
           (g.away_conference && conferenceMatch.test(g.away_conference))
@@ -135,7 +143,7 @@ export default function AdminDashboard({
       return;
     }
     const chosen = oddsGames
-      .filter((g) => selected[g.external_id])
+      .filter((g) => selected[g.external_id] && !g.already_added_to)
       .map((g) => ({
         ...g,
         spread:
@@ -278,6 +286,7 @@ export default function AdminDashboard({
   const [togglingPublish, setTogglingPublish] = useState(false);
   const [refreshingStats, setRefreshingStats] = useState(false);
   const [fetchingScores, setFetchingScores] = useState(false);
+  const [deletingWeek, setDeletingWeek] = useState(false);
 
   async function fetchScores() {
     setFetchingScores(true);
@@ -339,6 +348,29 @@ export default function AdminDashboard({
     }
   }
 
+  async function deleteWeek(week: Week) {
+    const count = games.filter((g) => g.week_id === week.id).length;
+    const warning =
+      `Delete "${week.label}" entirely? This removes all ${count} game${count === 1 ? "" : "s"} in it ` +
+      `and everyone's picks for those games. This can't be undone.`;
+    if (!confirm(warning)) return;
+    if (!confirm("Really sure? Type OK on the next prompt has no undo -- this is permanent.")) return;
+    setDeletingWeek(true);
+    const res = await fetch("/api/admin/delete-week", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week_id: week.id }),
+    });
+    setDeletingWeek(false);
+    if (res.ok) {
+      setSelectedWeekId(weeks.find((w) => w.id !== week.id)?.id ?? "");
+      router.refresh();
+    } else {
+      const { error } = await res.json();
+      alert(error);
+    }
+  }
+
   const selectedWeek = weeks.find((w) => w.id === selectedWeekId);
   const gamesForSelectedWeek = games
     .filter((g) => g.week_id === selectedWeekId)
@@ -350,9 +382,97 @@ export default function AdminDashboard({
     <div className="space-y-10">
       <h1 className="font-display text-3xl font-semibold text-ink">Admin</h1>
 
+      {/* Quick actions -- everything you touch week-to-week, in one place */}
+      <section className="rounded border border-line bg-surface p-4">
+        <h2 className="font-display text-lg text-orange">Quick actions</h2>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <select
+            value={selectedWeekId}
+            onChange={(e) => setSelectedWeekId(e.target.value ? Number(e.target.value) : "")}
+            className="rounded border border-line bg-surface2 px-2 py-1.5 text-ink"
+          >
+            <option value="">Choose a week...</option>
+            {weeks.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.label} {w.is_published ? "(published)" : "(draft)"}
+              </option>
+            ))}
+          </select>
+          {selectedWeek && (
+            <button
+              onClick={() => togglePublish(selectedWeek)}
+              disabled={togglingPublish}
+              className={`rounded px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+                selectedWeek.is_published
+                  ? "border border-loss text-loss hover:bg-loss/10"
+                  : "bg-orange text-field hover:bg-orange/90"
+              }`}
+            >
+              {togglingPublish
+                ? "Working..."
+                : selectedWeek.is_published
+                ? "Unpublish this week"
+                : "Publish this week"}
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded border border-line px-3 py-1.5">
+            <label className="text-xs text-mute">Look ahead</label>
+            <input
+              type="number"
+              min={1}
+              max={21}
+              value={daysAhead}
+              onChange={(e) => setDaysAhead(Number(e.target.value))}
+              className="w-12 rounded border border-line bg-surface2 px-1 py-0.5 text-center text-ink"
+            />
+            <span className="text-xs text-mute">days</span>
+          </div>
+          <button
+            onClick={pullOdds}
+            disabled={loadingOdds || !selectedWeekId}
+            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+          >
+            {loadingOdds ? "Pulling..." : "Pull current NCAAF odds"}
+          </button>
+          <button
+            onClick={refreshStats}
+            disabled={refreshingStats || !selectedWeekId}
+            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+          >
+            {refreshingStats ? "Refreshing..." : "Refresh rankings & stats"}
+          </button>
+          <button
+            onClick={fetchScores}
+            disabled={fetchingScores}
+            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+          >
+            {fetchingScores ? "Checking..." : "Fetch final scores automatically"}
+          </button>
+        </div>
+
+        {selectedWeek && (
+          <div className="mt-3 border-t border-line pt-3">
+            <button
+              onClick={() => deleteWeek(selectedWeek)}
+              disabled={deletingWeek}
+              className="rounded border border-loss px-4 py-2 text-xs text-loss hover:bg-loss/10 disabled:opacity-60"
+            >
+              {deletingWeek ? "Deleting..." : `Delete "${selectedWeek.label}" entirely`}
+            </button>
+            <p className="mt-1 text-[11px] text-mute">
+              For abandoned or duplicate weeks -- removes its games and everyone&apos;s picks for
+              them. Can&apos;t be undone.
+            </p>
+          </div>
+        )}
+      </section>
+
       {/* Create week */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-orange">1. Create a week</h2>
+        <h2 className="font-display text-lg text-orange">Create a week</h2>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-mute">Season</label>
@@ -392,57 +512,17 @@ export default function AdminDashboard({
         </div>
       </section>
 
-      {/* Manage a week: pick it once, then add games, edit games, remove games, publish/unpublish -- all in one place */}
+      {/* Manage a week's games */}
       <section className="rounded border border-line bg-surface p-4">
-        <h2 className="font-display text-lg text-orange">2. Manage a week</h2>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <select
-            value={selectedWeekId}
-            onChange={(e) => setSelectedWeekId(e.target.value ? Number(e.target.value) : "")}
-            className="rounded border border-line bg-surface2 px-2 py-1.5 text-ink"
-          >
-            <option value="">Choose a week...</option>
-            {weeks.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.label} {w.is_published ? "(published)" : "(draft)"}
-              </option>
-            ))}
-          </select>
-          {selectedWeek && (
-            <button
-              onClick={() => togglePublish(selectedWeek)}
-              disabled={togglingPublish}
-              className={`rounded px-4 py-2 text-sm font-medium disabled:opacity-60 ${
-                selectedWeek.is_published
-                  ? "border border-loss text-loss hover:bg-loss/10"
-                  : "bg-orange text-field hover:bg-orange/90"
-              }`}
-            >
-              {togglingPublish
-                ? "Working..."
-                : selectedWeek.is_published
-                ? "Unpublish this week"
-                : "Publish this week"}
-            </button>
-          )}
-          {selectedWeek && (
-            <button
-              onClick={refreshStats}
-              disabled={refreshingStats}
-              className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
-            >
-              {refreshingStats ? "Refreshing..." : "Refresh rankings & stats"}
-            </button>
-          )}
-        </div>
+        <h2 className="font-display text-lg text-orange">Manage games</h2>
 
         {selectedWeekId && (
           <>
             {/* Existing games in this week */}
             <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-medium text-ink">Games in this week</h3>
+              <h3 className="text-sm font-medium text-ink">Games in {selectedWeek?.label ?? "this week"}</h3>
               {gamesForSelectedWeek.length === 0 && (
-                <p className="text-sm text-mute">No games yet — pull odds below to add some.</p>
+                <p className="text-sm text-mute">No games yet — pull odds above to add some.</p>
               )}
               {gamesForSelectedWeek.map((g) => {
                 const edit = getRowEdit(g);
@@ -464,7 +544,14 @@ export default function AdminDashboard({
                         {locked && <span className="ml-2 text-xs text-loss">Locked</span>}
                       </div>
                       <span className="text-xs text-mute">
-                        {count > 0 ? `${count} pick${count === 1 ? "" : "s"} made` : "No picks yet"}
+                        {new Date(g.kickoff_time).toLocaleString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}{" "}
+                        · {count > 0 ? `${count} pick${count === 1 ? "" : "s"} made` : "No picks yet"}
                       </span>
                     </div>
 
@@ -528,24 +615,14 @@ export default function AdminDashboard({
 
             {/* Add more games to this same week */}
             <div className="mt-6 border-t border-line pt-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-ink">
-                  Add games to {selectedWeek?.label ?? "this week"}
-                </h3>
-                <button
-                  onClick={pullOdds}
-                  disabled={loadingOdds}
-                  className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
-                >
-                  {loadingOdds ? "Pulling..." : "Pull current NCAAF odds"}
-                </button>
-              </div>
+              <h3 className="text-sm font-medium text-ink">Add games to {selectedWeek?.label ?? "this week"}</h3>
 
               {oddsDebug && (
                 <div className="mt-3 rounded border border-line bg-surface2 p-3 text-xs text-mute">
-                  Matched {oddsDebug.oddsGamesMatchedToSportradar}/{oddsDebug.oddsGamesTotal * 2}{" "}
-                  team names to SportRadar · {oddsDebug.teamsRanked} teams currently ranked ·{" "}
-                  {oddsDebug.teamsWithStats} teams with stats on file.
+                  Showing games kicking off in the next {oddsDebug.daysAhead} days · matched{" "}
+                  {oddsDebug.oddsGamesMatchedToSportradar}/{oddsDebug.oddsGamesTotal * 2} team names to
+                  SportRadar · {oddsDebug.teamsRanked} teams currently ranked · {oddsDebug.teamsWithStats}{" "}
+                  teams with stats on file.
                   {oddsDebug.warnings.length > 0 && (
                     <div className="mt-1 text-loss">
                       {oddsDebug.warnings.map((w, i) => (
@@ -562,7 +639,8 @@ export default function AdminDashboard({
                     <p className="text-xs text-mute">
                       Check the games you want to add, adjust spreads if needed, and mark one as
                       the tiebreaker (this replaces any existing tiebreaker for the week). Ranked
-                      games are listed first, then the most lopsided unranked games.
+                      games are listed first, then the most lopsided unranked games. Games already
+                      added to a week are grayed out and can&apos;t be selected again.
                     </p>
                     <span className="whitespace-nowrap rounded border border-orange/40 bg-orange/10 px-3 py-1 text-sm font-medium text-orange">
                       {Object.values(selected).filter(Boolean).length} selected
@@ -585,68 +663,81 @@ export default function AdminDashboard({
                       + Select all MAC games
                     </button>
                   </div>
-                  {sortByRankThenSpread(oddsGames).map((g) => (
-                    <div
-                      key={g.external_id}
-                      className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface2 p-3"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selected[g.external_id]}
-                        onChange={(e) =>
-                          setSelected((prev) => ({ ...prev, [g.external_id]: e.target.checked }))
-                        }
-                      />
-                      <div className="flex-1 text-sm text-ink">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>
-                            {rankLabel(g.away_rank)}
-                            {g.away_team} @ {rankLabel(g.home_rank)}
-                            {g.home_team}
-                          </span>
-                          {(g.home_conference || g.away_conference) && (
-                            <span className="rounded-full border border-tan/50 bg-tan/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tan">
-                              {[g.away_conference, g.home_conference]
-                                .filter((c, i, arr) => c && arr.indexOf(c) === i)
-                                .join(" vs ")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-mute">
-                          {new Date(g.kickoff_time).toLocaleString()}
-                        </div>
-                        <div className="text-xs text-mute">
-                          {statLine(g.away_record, g.away_ppg)}
-                          {g.away_record || g.away_ppg != null ? "  vs  " : ""}
-                          {statLine(g.home_record, g.home_ppg)}
-                        </div>
-                      </div>
-                      <label className="text-xs text-mute">
-                        Home spread
+                  {sortByRankThenSpread(oddsGames).map((g) => {
+                    const disabled = !!g.already_added_to;
+                    return (
+                      <div
+                        key={g.external_id}
+                        className={`flex flex-wrap items-center gap-3 rounded border border-line p-3 ${
+                          disabled ? "bg-surface/60 opacity-60" : "bg-surface2"
+                        }`}
+                      >
                         <input
-                          type="number"
-                          step="0.5"
-                          value={spreadOverrides[g.external_id] ?? g.spread}
+                          type="checkbox"
+                          checked={!!selected[g.external_id]}
+                          disabled={disabled}
                           onChange={(e) =>
-                            setSpreadOverrides((prev) => ({
-                              ...prev,
-                              [g.external_id]: e.target.value,
-                            }))
+                            setSelected((prev) => ({ ...prev, [g.external_id]: e.target.checked }))
                           }
-                          className="ml-2 w-20 rounded border border-line bg-field px-2 py-1 text-ink"
                         />
-                      </label>
-                      <label className="flex items-center gap-1 text-xs text-mute">
-                        <input
-                          type="radio"
-                          name="tiebreaker"
-                          checked={tiebreakerId === g.external_id}
-                          onChange={() => setTiebreakerId(g.external_id)}
-                        />
-                        Tiebreaker
-                      </label>
-                    </div>
-                  ))}
+                        <div className="flex-1 text-sm text-ink">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>
+                              {rankLabel(g.away_rank)}
+                              {g.away_team} @ {rankLabel(g.home_rank)}
+                              {g.home_team}
+                            </span>
+                            {disabled && (
+                              <span className="rounded-full border border-loss/50 bg-loss/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-loss">
+                                Already in {g.already_added_to}
+                              </span>
+                            )}
+                            {!disabled && (g.home_conference || g.away_conference) && (
+                              <span className="rounded-full border border-tan/50 bg-tan/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tan">
+                                {[g.away_conference, g.home_conference]
+                                  .filter((c, i, arr) => c && arr.indexOf(c) === i)
+                                  .join(" vs ")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-mute">
+                            {new Date(g.kickoff_time).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-mute">
+                            {statLine(g.away_record, g.away_ppg)}
+                            {g.away_record || g.away_ppg != null ? "  vs  " : ""}
+                            {statLine(g.home_record, g.home_ppg)}
+                          </div>
+                        </div>
+                        <label className="text-xs text-mute">
+                          Home spread
+                          <input
+                            type="number"
+                            step="0.5"
+                            disabled={disabled}
+                            value={spreadOverrides[g.external_id] ?? g.spread}
+                            onChange={(e) =>
+                              setSpreadOverrides((prev) => ({
+                                ...prev,
+                                [g.external_id]: e.target.value,
+                              }))
+                            }
+                            className="ml-2 w-20 rounded border border-line bg-field px-2 py-1 text-ink disabled:opacity-50"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-mute">
+                          <input
+                            type="radio"
+                            name="tiebreaker"
+                            disabled={disabled}
+                            checked={tiebreakerId === g.external_id}
+                            onChange={() => setTiebreakerId(g.external_id)}
+                          />
+                          Tiebreaker
+                        </label>
+                      </div>
+                    );
+                  })}
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={addGamesToWeek}
@@ -665,21 +756,12 @@ export default function AdminDashboard({
 
       {/* Enter results */}
       <section className="rounded border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg text-orange">3. Enter final scores</h2>
-          <button
-            onClick={fetchScores}
-            disabled={fetchingScores}
-            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
-          >
-            {fetchingScores ? "Checking..." : "Fetch final scores automatically"}
-          </button>
-        </div>
+        <h2 className="font-display text-lg text-orange">Enter final scores</h2>
         <p className="mt-1 text-xs text-mute">
           Scoring, weekly winners, and the cumulative leaderboard update automatically once a
-          final score is saved. &quot;Fetch final scores automatically&quot; pulls completed
-          results from the Odds API for any game it was used to add (games added by hand still
-          need a manual score below).
+          final score is saved. Games added via odds pull are usually covered by the &quot;Fetch
+          final scores automatically&quot; quick action above -- this list is for games added by
+          hand.
         </p>
         <div className="mt-3 space-y-2">
           {needsResults.length === 0 && (
