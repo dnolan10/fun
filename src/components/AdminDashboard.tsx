@@ -389,7 +389,7 @@ export default function AdminDashboard({
           <select
             value={selectedWeekId}
             onChange={(e) => setSelectedWeekId(e.target.value ? Number(e.target.value) : "")}
-            className="rounded border border-line bg-surface2 px-2 py-1.5 text-ink"
+            className="w-full rounded border border-line bg-surface2 px-2 py-2 text-ink sm:w-auto sm:py-1.5"
           >
             <option value="">Choose a week...</option>
             {weeks.map((w) => (
@@ -402,7 +402,7 @@ export default function AdminDashboard({
             <button
               onClick={() => togglePublish(selectedWeek)}
               disabled={togglingPublish}
-              className={`rounded px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+              className={`w-full rounded px-4 py-2 text-sm font-medium disabled:opacity-60 sm:w-auto ${
                 selectedWeek.is_published
                   ? "border border-loss text-loss hover:bg-loss/10"
                   : "bg-orange text-field hover:bg-orange/90"
@@ -433,21 +433,21 @@ export default function AdminDashboard({
           <button
             onClick={pullOdds}
             disabled={loadingOdds || !selectedWeekId}
-            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+            className="w-full rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60 sm:w-auto"
           >
             {loadingOdds ? "Pulling..." : "Pull current NCAAF odds"}
           </button>
           <button
             onClick={refreshStats}
             disabled={refreshingStats || !selectedWeekId}
-            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+            className="w-full rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60 sm:w-auto"
           >
             {refreshingStats ? "Refreshing..." : "Refresh rankings & stats"}
           </button>
           <button
             onClick={fetchScores}
             disabled={fetchingScores}
-            className="rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60"
+            className="w-full rounded border border-line px-4 py-2 text-sm text-ink hover:border-orange hover:text-orange disabled:opacity-60 sm:w-auto"
           >
             {fetchingScores ? "Checking..." : "Fetch final scores automatically"}
           </button>
@@ -458,7 +458,7 @@ export default function AdminDashboard({
             <button
               onClick={() => deleteWeek(selectedWeek)}
               disabled={deletingWeek}
-              className="rounded border border-loss px-4 py-2 text-xs text-loss hover:bg-loss/10 disabled:opacity-60"
+              className="w-full rounded border border-loss px-4 py-2 text-xs text-loss hover:bg-loss/10 disabled:opacity-60 sm:w-auto"
             >
               {deletingWeek ? "Deleting..." : `Delete "${selectedWeek.label}" entirely`}
             </button>
@@ -492,7 +492,7 @@ export default function AdminDashboard({
               className="mt-1 w-20 rounded border border-line bg-surface2 px-2 py-1.5 text-ink"
             />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1 basis-full sm:basis-auto">
             <label className="block text-xs text-mute">Label</label>
             <input
               type="text"
@@ -505,7 +505,7 @@ export default function AdminDashboard({
           <button
             onClick={createWeek}
             disabled={creatingWeek}
-            className="rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90 disabled:opacity-60"
+            className="w-full rounded bg-orange px-4 py-2 text-sm font-medium text-field hover:bg-orange/90 disabled:opacity-60 sm:w-auto"
           >
             {creatingWeek ? "Creating..." : "Create week"}
           </button>
@@ -536,7 +536,7 @@ export default function AdminDashboard({
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm text-ink">
+                      <div className="min-w-0 text-sm text-ink">
                         {g.away_team} @ {g.home_team}
                         {g.is_tiebreaker && (
                           <span className="ml-2 text-xs font-medium text-orange">TIEBREAKER</span>
@@ -582,7 +582,7 @@ export default function AdminDashboard({
                               [g.id]: { ...edit, kickoff: e.target.value },
                             }))
                           }
-                          className="ml-2 rounded border border-line bg-field px-2 py-1 text-ink"
+                          className="ml-2 w-full rounded border border-line bg-field px-2 py-1 text-ink sm:w-auto"
                         />
                       </label>
                       <button
@@ -680,7 +680,7 @@ export default function AdminDashboard({
                             setSelected((prev) => ({ ...prev, [g.external_id]: e.target.checked }))
                           }
                         />
-                        <div className="flex-1 text-sm text-ink">
+                        <div className="min-w-0 flex-1 text-sm text-ink">
                           <div className="flex flex-wrap items-center gap-2">
                             <span>
                               {rankLabel(g.away_rank)}
@@ -772,7 +772,7 @@ export default function AdminDashboard({
               key={g.id}
               className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface2 p-3"
             >
-              <div className="flex-1 text-sm text-ink">
+              <div className="min-w-0 flex-1 basis-full text-sm text-ink sm:basis-auto">
                 {g.away_team} @ {g.home_team}
               </div>
               <input
