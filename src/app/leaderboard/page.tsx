@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Avatar from "@/components/Avatar";
 import WeeklyWinnerBanner from "@/components/WeeklyWinnerBanner";
+import SeasonLeaderBanner from "@/components/SeasonLeaderBanner";
 import { getAllUserRecords } from "@/lib/records";
 import { formatRecord } from "@/lib/scoring";
 import { computeBotStandings, type BotGame } from "@/lib/bots";
@@ -86,6 +87,16 @@ export default async function LeaderboardPage() {
   }));
   const seasonRows = [...seasonUserRows, ...seasonBotRows].sort((a, b) => b.points - a.points);
 
+  // Season leader banner, human players only (same reasoning as the weekly
+  // champion banner -- bots don't get the bragging-rights spotlight).
+  const humanSeasonRows = seasonUserRows.slice().sort((a, b) => b.points - a.points);
+  let seasonLeaderBanner: { points: number; leaders: string[] } | null = null;
+  if (humanSeasonRows.length > 0 && humanSeasonRows[0].points > 0) {
+    const topPoints = humanSeasonRows[0].points;
+    const leaders = humanSeasonRows.filter((r) => r.points === topPoints).map((r) => r.name);
+    seasonLeaderBanner = { points: topPoints, leaders };
+  }
+
   const weekBlocks = [];
   let champBanner: { weekLabel: string; points: number; champions: string[] } | null = null;
 
@@ -166,13 +177,18 @@ export default async function LeaderboardPage() {
     <div>
       <h1 className="font-display text-3xl font-semibold text-ink">Standings</h1>
 
-      {champBanner && (
-        <div className="mt-4">
-          <WeeklyWinnerBanner
-            weekLabel={champBanner.weekLabel}
-            points={champBanner.points}
-            champions={champBanner.champions}
-          />
+      {(champBanner || seasonLeaderBanner) && (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {champBanner && (
+            <WeeklyWinnerBanner
+              weekLabel={champBanner.weekLabel}
+              points={champBanner.points}
+              champions={champBanner.champions}
+            />
+          )}
+          {seasonLeaderBanner && (
+            <SeasonLeaderBanner points={seasonLeaderBanner.points} leaders={seasonLeaderBanner.leaders} />
+          )}
         </div>
       )}
 
